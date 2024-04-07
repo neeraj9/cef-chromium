@@ -360,6 +360,13 @@ base::OnceCallback<void(RenderViewContextMenu*)>* GetMenuShownCallback() {
   return callback.get();
 }
 
+
+RenderViewContextMenu::MenuCreatedCallback* GetMenuCreatedCallback() {
+  static base::NoDestructor<RenderViewContextMenu::MenuCreatedCallback>
+      callback;
+  return callback.get();
+}
+
 enum class UmaEnumIdLookupType {
   GeneralEnumId,
   ContextSpecificEnumId,
@@ -616,6 +623,10 @@ int FindUMAEnumValueForCommand(int id, UmaEnumIdLookupType type) {
   if (ContextMenuMatcher::IsExtensionsCustomCommandId(id))
     return 1;
 
+  // Match the MENU_ID_USER_FIRST to MENU_ID_USER_LAST range from cef_types.h.
+  if (id >= 26500 && id <= 28500)
+    return 1;
+
   id = CollapseCommandsForUMA(id);
   const auto& map = GetIdcToUmaMap(type);
   auto it = map.find(id);
@@ -862,6 +873,14 @@ RenderViewContextMenu::RenderViewContextMenu(
 #if BUILDFLAG(ENABLE_SCREEN_AI_SERVICE)
   pdf_ocr_submenu_model_ = std::make_unique<ui::SimpleMenuModel>(this);
 #endif  // BUILDFLAG(ENABLE_SCREEN_AI_SERVICE)
+
+  auto* cb = GetMenuCreatedCallback();
+  if (!cb->is_null()) {
+    first_observer_ = cb->Run(this);
+    if (first_observer_) {
+      observers_.AddObserver(first_observer_.get());
+    }
+  }
 
   observers_.AddObserver(&autofill_context_menu_manager_);
 }
@@ -1336,6 +1355,12 @@ void RenderViewContextMenu::InitMenu() {
       autofill_client->HideAutofillPopup(
           autofill::PopupHidingReason::kContextMenuOpened);
     }
+  }
+
+  if (first_observer_) {
+    // Do this last so that the observer can optionally modify previously
+    // created items.
+    first_observer_->InitMenu(params_);
   }
 }
 
@@ -3554,6 +3579,12 @@ void RenderViewContextMenu::RegisterMenuShownCallbackForTesting(
 void RenderViewContextMenu::RegisterExecutePluginActionCallbackForTesting(
     ExecutePluginActionCallback cb) {
   execute_plugin_action_callback_ = std::move(cb);
+}
+
+// static
+void RenderViewContextMenu::RegisterMenuCreatedCallback(
+    MenuCreatedCallback cb) {
+  *GetMenuCreatedCallback() = cb;
 }
 
 custom_handlers::ProtocolHandlerRegistry::ProtocolHandlerList

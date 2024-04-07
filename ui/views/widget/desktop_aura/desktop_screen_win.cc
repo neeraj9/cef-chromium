@@ -23,6 +23,8 @@ DesktopScreenWin::~DesktopScreenWin() {
 }
 
 HWND DesktopScreenWin::GetHWNDFromNativeWindow(gfx::NativeWindow window) const {
+  if (!window)
+    return nullptr;
   aura::WindowTreeHost* host = window->GetHost();
   return host ? host->GetAcceleratedWidget() : nullptr;
 }

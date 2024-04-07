@@ -48,6 +48,10 @@
 #include "ui/views/window/client_view.h"
 #include "ui/views/window/hit_test_utils.h"
 
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/browser/chrome/views/chrome_views_util.h"
+#endif
+
 using views::View;
 using web_modal::ModalDialogHostObserver;
 using web_modal::WebContentsModalDialogHost;
@@ -92,6 +96,10 @@ class BrowserViewLayout::WebContentsModalDialogHostViews
       observer.OnHostDestroying();
   }
 
+  bool HasObservers() const {
+    return !observer_list_.empty();
+  }
+
   void NotifyPositionRequiresUpdate() {
     for (ModalDialogHostObserver& observer : observer_list_)
       observer.OnPositionRequiresUpdate();
@@ -102,7 +110,7 @@ class BrowserViewLayout::WebContentsModalDialogHostViews
     views::View* view = browser_view_layout_->contents_container_;
     gfx::Rect rect = view->ConvertRectToWidget(view->GetLocalBounds());
     const int middle_x = rect.x() + rect.width() / 2;
-    const int top = browser_view_layout_->dialog_top_y_;
+    const int top = GetDialogTopY();
     return gfx::Point(middle_x - size.width() / 2, top);
   }
 
@@ -117,7 +125,7 @@ class BrowserViewLayout::WebContentsModalDialogHostViews
   gfx::Size GetMaximumDialogSize() override {
     views::View* view = browser_view_layout_->contents_container_;
     gfx::Rect content_area = view->ConvertRectToWidget(view->GetLocalBounds());
-    const int top = browser_view_layout_->dialog_top_y_;
+    const int top = GetDialogTopY();
     return gfx::Size(content_area.width(), content_area.bottom() - top);
   }
 
@@ -129,6 +137,13 @@ class BrowserViewLayout::WebContentsModalDialogHostViews
  private:
   gfx::NativeView GetHostView() const override {
     return GetHostWidget()->GetNativeView();
+  }
+
+  int GetDialogTopY() const {
+    int dialog_top_y = browser_view_layout_->dialog_top_y_;
+    browser_view_layout_->delegate_->UpdateDialogTopInsetInBrowserView(
+        &dialog_top_y);
+    return dialog_top_y;
   }
 
   // Add/remove observer.
@@ -441,6 +456,8 @@ void BrowserViewLayout::Layout(views::View* browser_view) {
   if (exclusive_access_bubble)
     exclusive_access_bubble->RepositionIfVisible();
 
+  // Avoid unnecessary calls to UpdateDialogTopInsetInBrowserView().
+  if (dialog_host_->HasObservers()) {
   // Adjust any hosted dialogs if the browser's dialog hosting bounds changed.
   const gfx::Rect dialog_bounds(dialog_host_->GetDialogPosition(gfx::Size()),
                                 dialog_host_->GetMaximumDialogSize());
@@ -453,6 +470,7 @@ void BrowserViewLayout::Layout(views::View* browser_view) {
   if (latest_dialog_bounds_in_screen_ != dialog_bounds_in_screen) {
     latest_dialog_bounds_in_screen_ = dialog_bounds_in_screen;
     dialog_host_->NotifyPositionRequiresUpdate();
+  }
   }
 }
 
@@ -583,6 +601,13 @@ int BrowserViewLayout::LayoutWebUITabStrip(int top) {
 
 int BrowserViewLayout::LayoutToolbar(int top) {
   TRACE_EVENT0("ui", "BrowserViewLayout::LayoutToolbar");
+#if BUILDFLAG(ENABLE_CEF)
+  if (cef::IsCefView(toolbar_)) {
+    // CEF may take ownership of the toolbar. Early exit to avoid the DCHECK
+    // in LayoutManager::SetViewVisibility().
+    return top;
+  }
+#endif
   int browser_view_width = vertical_layout_rect_.width();
   bool toolbar_visible = delegate_->IsToolbarVisible();
   int height = toolbar_visible ? toolbar_->GetPreferredSize().height() : 0;

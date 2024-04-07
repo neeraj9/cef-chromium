@@ -14,6 +14,14 @@
 #include <utility>
 #include <vector>
 
+#include "cef/libcef/features/features.h"
+
+#if BUILDFLAG(IS_CEF_SANDBOX_BUILD)
+// Avoid overloads for const std::array in base/ranges/ranges.h that don't
+// compile with MSVC. See issue #3519.
+#define CEF_EXCLUDE_PROBLEMATIC_CONST_ARRAY_OVERLOADS 1
+#endif
+
 #include "base/check_op.h"
 #include "base/functional/callback.h"
 #include "base/notreached.h"

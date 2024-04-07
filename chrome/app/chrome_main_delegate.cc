@@ -41,6 +41,7 @@
 #include "base/trace_event/trace_event_impl.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/buildflags.h"
 #include "chrome/browser/chrome_content_browser_client.h"
 #include "chrome/browser/chrome_resource_bundle_helper.h"
@@ -606,6 +607,9 @@ struct MainFunction {
 
 // Initializes the user data dir. Must be called before InitializeLocalState().
 void InitializeUserDataDir(base::CommandLine* command_line) {
+  if (cef::IsChromeRuntimeEnabled()) {
+    return;
+  }
 #if BUILDFLAG(IS_CHROMEOS_LACROS)
   // In debug builds of Lacros, we keep track of when the user data dir
   // is initialized, to ensure the cryptohome is not accessed before login
@@ -821,6 +825,10 @@ ChromeMainDelegate::~ChromeMainDelegate() {
 ChromeMainDelegate::~ChromeMainDelegate() = default;
 #endif  // !BUILDFLAG(IS_ANDROID)
 
+void ChromeMainDelegate::CleanupOnUIThread() {
+  memory_system_.reset();
+}
+
 std::optional<int> ChromeMainDelegate::PostEarlyInitialization(
     InvokedIn invoked_in) {
   DUMP_WILL_BE_CHECK(base::ThreadPoolInstance::Get());
@@ -846,7 +854,7 @@ std::optional<int> ChromeMainDelegate::PostEarlyInitialization(
     // future session's metrics.
     DeferBrowserMetrics(user_data_dir);
 
-#if BUILDFLAG(IS_WIN)
+#if BUILDFLAG(IS_WIN) && !BUILDFLAG(ENABLE_CEF)
     // In the case the process is not the singleton process, the uninstall tasks
     // need to be executed here. A window will be displayed asking to close all
     // running instances.
@@ -1013,7 +1021,8 @@ std::optional<int> ChromeMainDelegate::PostEarlyInitialization(
 
   if (base::FeatureList::IsEnabled(
           features::kWriteBasicSystemProfileToPersistentHistogramsFile)) {
-    bool record = true;
+    // Avoid CEF crash with multi-threaded-message-loop.
+    bool record = !cef::IsChromeRuntimeEnabled();
 #if BUILDFLAG(IS_ANDROID)
     record =
         base::FeatureList::IsEnabled(chrome::android::kUmaBackgroundSessions);
@@ -1473,6 +1482,7 @@ void ChromeMainDelegate::PreSandboxStartup() {
   std::string process_type =
       command_line.GetSwitchValueASCII(switches::kProcessType);
 
+  if (!cef::IsChromeRuntimeEnabled()) {
   crash_reporter::InitializeCrashKeys();
 
 #if BUILDFLAG(IS_CHROMEOS_LACROS)
@@ -1491,6 +1501,7 @@ void ChromeMainDelegate::PreSandboxStartup() {
   InitMacCrashReporter(command_line, process_type);
   SetUpInstallerPreferences(command_line);
 #endif
+  }  // !cef::IsChromeRuntimeEnabled()
 
 #if BUILDFLAG(IS_WIN)
   child_process_logging::Init();
@@ -1703,6 +1714,7 @@ void ChromeMainDelegate::PreSandboxStartup() {
     CHECK(!loaded_locale.empty()) << "Locale could not be found for " << locale;
   }
 
+  if (!cef::IsChromeRuntimeEnabled()) {
 #if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
   // Zygote needs to call InitCrashReporter() in RunZygote().
   if (process_type != switches::kZygoteProcess) {
@@ -1738,6 +1750,7 @@ void ChromeMainDelegate::PreSandboxStartup() {
   // After all the platform Breakpads have been initialized, store the command
   // line for crash reporting.
   crash_keys::SetCrashKeysFromCommandLine(command_line);
+  }  // !cef::IsChromeRuntimeEnabled()
 
 #if BUILDFLAG(ENABLE_PDF)
   MaybePatchGdiGetFontData();
@@ -1863,6 +1876,7 @@ void ChromeMainDelegate::ZygoteForked() {
     SetUpProfilingShutdownHandler();
   }
 
+  if (!cef::IsChromeRuntimeEnabled()) {
   // Needs to be called after we have chrome::DIR_USER_DATA.  BrowserMain sets
   // this up for the browser process in a different manner.
   const base::CommandLine* command_line =
@@ -1875,6 +1889,7 @@ void ChromeMainDelegate::ZygoteForked() {
 
   // Reset the command line for the newly spawned process.
   crash_keys::SetCrashKeysFromCommandLine(*command_line);
+  }  // !cef::IsChromeRuntimeEnabled()
 }
 
 #endif  // BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
@@ -1974,6 +1989,7 @@ void ChromeMainDelegate::InitializeMemorySystem() {
                               channel == version_info::Channel::DEV);
   const bool gwp_asan_boost_sampling = is_canary_dev || is_browser_process;
 
+  memory_system_ = std::make_unique<memory_system::MemorySystem>();
   memory_system::Initializer()
       .SetGwpAsanParameters(gwp_asan_boost_sampling, process_type)
       .SetProfilingClientParameters(channel,
@@ -1983,5 +1999,5 @@ void ChromeMainDelegate::InitializeMemorySystem() {
                                memory_system::DispatcherParameters::
                                    AllocationTraceRecorderInclusion::kDynamic,
                                process_type)
-      .Initialize(memory_system_);
+      .Initialize(*memory_system_);
 }

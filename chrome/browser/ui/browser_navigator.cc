@@ -305,6 +305,10 @@ std::pair<Browser*, int> GetBrowserAndTabForDisposition(
               : 1.0;
       browser_params.pip_options = pip_options;
 
+#if BUILDFLAG(ENABLE_CEF)
+      browser_params.opener = params.browser;
+#endif
+
       const BrowserWindow* const browser_window = params.browser->window();
       const gfx::NativeWindow native_window =
           browser_window ? browser_window->GetNativeWindow()
@@ -589,6 +593,13 @@ std::unique_ptr<content::WebContents> CreateTargetContents(
 
   std::unique_ptr<WebContents> target_contents =
       WebContents::Create(create_params);
+
+#if BUILDFLAG(ENABLE_CEF)
+  auto cef_delegate = params.browser->cef_delegate();
+  if (cef_delegate) {
+    cef_delegate->OnWebContentsCreated(target_contents.get());
+  }
+#endif
 
   // New tabs can have WebUI URLs that will make calls back to arbitrary
   // tab helpers, so the entire set of tab helpers needs to be set up

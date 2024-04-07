@@ -33,7 +33,9 @@
 #include "components/viz/common/frame_sinks/begin_frame_args.h"
 #include "components/viz/common/surfaces/frame_sink_id.h"
 #include "components/viz/common/surfaces/subtree_capture_id.h"
+#include "components/viz/host/host_display_client.h"
 #include "components/viz/host/host_frame_sink_client.h"
+#include "components/viz/service/display/software_output_device.h"
 #include "mojo/public/cpp/bindings/associated_remote.h"
 #include "mojo/public/cpp/bindings/pending_remote.h"
 #include "services/viz/privileged/mojom/compositing/display_private.mojom.h"
@@ -146,6 +148,14 @@ class COMPOSITOR_EXPORT ContextFactory {
   virtual viz::HostFrameSinkManager* GetHostFrameSinkManager() = 0;
 };
 
+class COMPOSITOR_EXPORT CompositorDelegate {
+ public:
+  virtual std::unique_ptr<viz::HostDisplayClient> CreateHostDisplayClient() = 0;
+
+ protected:
+  virtual ~CompositorDelegate() {}
+};
+
 // Compositor object to take care of GPU painting.
 // A Browser compositor object is responsible for generating the final
 // displayable form of pixels comprising a single widget's contents. It draws an
@@ -188,6 +198,9 @@ class COMPOSITOR_EXPORT Compositor : public base::PowerSuspendObserver,
 
   // Schedules a redraw of the layer tree associated with this compositor.
   void ScheduleDraw();
+
+  CompositorDelegate* delegate() const { return delegate_; }
+  void SetDelegate(CompositorDelegate* delegate) { delegate_ = delegate; }
 
   // Sets the root of the layer tree drawn by this Compositor. The root layer
   // must have no parent. The compositor's root layer is reset if the root layer
@@ -538,6 +551,8 @@ class COMPOSITOR_EXPORT Compositor : public base::PowerSuspendObserver,
       external_begin_frame_controller_;
 
   std::unique_ptr<PendingBeginFrameArgs> pending_begin_frame_args_;
+
+  CompositorDelegate* delegate_ = nullptr;
 
   // The root of the Layer tree drawn by this compositor.
   raw_ptr<Layer> root_layer_ = nullptr;

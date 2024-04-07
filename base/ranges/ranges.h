@@ -30,12 +30,14 @@ constexpr T* begin(std::array<T, N>& array, priority_tag<2> tag) {
   return const_cast<T*>(begin(const_cast<const std::array<T, N>&>(array), tag));
 }
 
+#if !defined(CEF_EXCLUDE_PROBLEMATIC_CONST_ARRAY_OVERLOADS)
 // Overload for const std::array. Required since std::array::begin is not
 // constexpr prior to C++17.
 template <typename T, size_t N>
 constexpr const T* begin(const std::array<T, N>& array, priority_tag<2>) {
   return N != 0 ? &array[0] : nullptr;
 }
+#endif
 
 // Generic container overload.
 template <typename Range>
@@ -65,12 +67,14 @@ constexpr T* end(std::array<T, N>& array, priority_tag<2> tag) {
   return const_cast<T*>(end(const_cast<const std::array<T, N>&>(array), tag));
 }
 
+#if !defined(CEF_EXCLUDE_PROBLEMATIC_CONST_ARRAY_OVERLOADS)
 // Overload for const std::array. Required since std::array::end is not
 // constexpr prior to C++17.
 template <typename T, size_t N>
 constexpr const T* end(const std::array<T, N>& array, priority_tag<2>) {
   return N != 0 ? (&array[0]) + N : nullptr;
 }
+#endif
 
 // Generic container overload.
 template <typename Range>

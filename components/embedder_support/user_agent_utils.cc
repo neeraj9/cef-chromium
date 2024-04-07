@@ -18,6 +18,7 @@
 #include "base/version.h"
 #include "build/branding_buildflags.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/features.h"
 #include "components/embedder_support/pref_names.h"
 #include "components/embedder_support/switches.h"
 #include "components/policy/core/common/policy_pref_names.h"
@@ -37,6 +38,10 @@
 #include "base/win/registry.h"
 #include "base/win/windows_version.h"
 #endif  // BUILDFLAG(IS_WIN)
+
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/common/cef_switches.h"
+#endif
 
 namespace embedder_support {
 
@@ -253,6 +258,14 @@ std::vector<std::string> GetFormFactorClientHints(
 
 std::string GetProductAndVersion(
     UserAgentReductionEnterprisePolicyState user_agent_reduction) {
+#if BUILDFLAG(ENABLE_CEF)
+  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+  if (command_line->HasSwitch(switches::kUserAgentProductAndVersion)) {
+    return command_line->GetSwitchValueASCII(
+        switches::kUserAgentProductAndVersion);
+  }
+#endif
+
   return ShouldReduceUserAgentMinorVersion(user_agent_reduction)
              ? version_info::GetProductNameAndVersionForReducedUserAgent(
                    blink::features::kUserAgentFrozenBuildVersion.Get())

@@ -132,10 +132,15 @@ class BrowserView : public BrowserWindow,
   METADATA_HEADER(BrowserView, views::ClientView)
 
  public:
+  BrowserView();
   explicit BrowserView(std::unique_ptr<Browser> browser);
+  void InitBrowser(std::unique_ptr<Browser> browser);
   BrowserView(const BrowserView&) = delete;
   BrowserView& operator=(const BrowserView&) = delete;
   ~BrowserView() override;
+
+  // Key used to bind BrowserView to the Widget with which it is associated.
+  static const char kBrowserViewKey[];
 
   void set_frame(BrowserFrame* frame) {
     frame_ = frame;
@@ -846,6 +851,9 @@ class BrowserView : public BrowserWindow,
   static DevToolsDockedPlacement GetDevToolsDockedPlacement(
       const gfx::Rect& contents_webview_bounds,
       const gfx::Rect& local_webview_container_bounds);
+
+ protected:
+  virtual ToolbarView* OverrideCreateToolbar() { return nullptr; }
 
  private:
   // Do not friend BrowserViewLayout. Use the BrowserViewLayoutDelegate

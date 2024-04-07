@@ -62,6 +62,12 @@ class ExtensionHost : public DeferredStartRenderHost,
                 content::SiteInstance* site_instance,
                 const GURL& url,
                 mojom::ViewType host_type);
+  ExtensionHost(ExtensionHostDelegate* delegate,
+                const Extension* extension,
+                content::BrowserContext* browser_context,
+                content::WebContents* host_contents,
+                const GURL& url,
+                mojom::ViewType host_type);
 
   ExtensionHost(const ExtensionHost&) = delete;
   ExtensionHost& operator=(const ExtensionHost&) = delete;
@@ -72,7 +78,7 @@ class ExtensionHost : public DeferredStartRenderHost,
   const Extension* extension() const { return extension_; }
 
   const ExtensionId& extension_id() const { return extension_id_; }
-  content::WebContents* host_contents() const { return host_contents_.get(); }
+  content::WebContents* host_contents() const { return host_contents_; }
   content::RenderFrameHost* main_frame_host() const { return main_frame_host_; }
   content::RenderProcessHost* render_process_host() const;
   bool has_loaded_once() const { return has_loaded_once_; }
@@ -244,7 +250,8 @@ class ExtensionHost : public DeferredStartRenderHost,
   raw_ptr<content::BrowserContext> browser_context_;
 
   // The host for our HTML content.
-  std::unique_ptr<content::WebContents> host_contents_;
+  std::unique_ptr<content::WebContents> host_contents_owned_;
+  content::WebContents* host_contents_;
 
   // A pointer to the current or speculative main frame in `host_contents_`. We
   // can't access this frame through the `host_contents_` directly as it does

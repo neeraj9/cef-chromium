@@ -190,12 +190,12 @@ PolicyGlobal* ConfigBase::policy() {
   return policy_;
 }
 
-std::optional<base::span<const uint8_t>> ConfigBase::policy_span() {
+std::optional<base::span<uint8_t>> ConfigBase::policy_span() {
   if (policy_) {
     // Note: this is not policy().data_size as that relates to internal data,
     // not the entire allocated policy area.
-    return base::span<const uint8_t>(reinterpret_cast<uint8_t*>(policy_.get()),
-                                     kPolMemSize);
+    return base::span<uint8_t>(reinterpret_cast<uint8_t*>(policy_.get()),
+                               kPolMemSize);
   }
   return std::nullopt;
 }
@@ -774,14 +774,14 @@ bool PolicyBase::SetupHandleCloser(TargetProcess& target) {
   return (SBOX_ALL_OK == rc);
 }
 
-std::optional<base::span<const uint8_t>> PolicyBase::delegate_data_span() {
+std::optional<base::span<uint8_t>> PolicyBase::delegate_data_span() {
   if (delegate_data_) {
     return base::make_span(*delegate_data_);
   }
   return std::nullopt;
 }
 
-void PolicyBase::AddDelegateData(base::span<const uint8_t> data) {
+void PolicyBase::AddDelegateData(base::span<uint8_t> data) {
   CHECK(data.size() > 0u);
   // Can only set this once - as there is only one region sent to the child.
   CHECK(!delegate_data_);

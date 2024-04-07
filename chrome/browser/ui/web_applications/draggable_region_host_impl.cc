@@ -11,6 +11,24 @@
 #include "chrome/common/chrome_features.h"
 #include "mojo/public/cpp/bindings/self_owned_receiver.h"
 
+namespace {
+
+bool IsSupported(Browser* browser) {
+  if (web_app::AppBrowserController::IsWebApp(browser))
+    return true;
+
+#if BUILDFLAG(ENABLE_CEF)
+  if (browser->cef_delegate() &&
+      browser->cef_delegate()->SupportsDraggableRegion()) {
+    return true;
+  }
+#endif
+
+  return false;
+}
+  
+}  // namespace
+
 DraggableRegionsHostImpl::DraggableRegionsHostImpl(
     content::RenderFrameHost& render_frame_host,
     mojo::PendingReceiver<chrome::mojom::DraggableRegions> receiver)
@@ -28,7 +46,7 @@ void DraggableRegionsHostImpl::CreateIfAllowed(
   auto* browser = chrome::FindBrowserWithTab(web_contents);
 
   // We only want to bind the receiver for PWAs.
-  if (!web_app::AppBrowserController::IsWebApp(browser))
+  if (!IsSupported(browser))
     return;
 
   // The object is bound to the lifetime of |render_frame_host| and the mojo
@@ -43,7 +61,7 @@ void DraggableRegionsHostImpl::UpdateDraggableRegions(
   auto* browser = chrome::FindBrowserWithTab(web_contents);
   // When a WebApp browser's WebContents is reparented to a tabbed browser, a
   // draggable regions update may race with the reparenting logic.
-  if (!web_app::AppBrowserController::IsWebApp(browser))
+  if (!IsSupported(browser))
     return;
 
   SkRegion sk_region;
@@ -56,5 +74,12 @@ void DraggableRegionsHostImpl::UpdateDraggableRegions(
   }
 
   auto* app_browser_controller = browser->app_controller();
-  app_browser_controller->UpdateDraggableRegion(sk_region);
+  if (app_browser_controller) {
+    app_browser_controller->UpdateDraggableRegion(sk_region);
+  }
+#if BUILDFLAG(ENABLE_CEF)
+  else {
+    browser->cef_delegate()->UpdateDraggableRegion(sk_region);
+  }
+#endif
 }

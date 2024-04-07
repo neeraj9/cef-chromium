@@ -42,6 +42,7 @@ void MenuRunner::RunMenuAt(
     MenuAnchorPosition anchor,
     ui::MenuSourceType source_type,
     gfx::NativeView native_view_for_gestures,
+    gfx::AcceleratedWidget parent_widget,
     std::optional<gfx::RoundedCornersF> corners,
     std::optional<std::string> show_menu_host_duration_histogram) {
   // Do not attempt to show the menu if the application is currently shutting
@@ -89,7 +90,7 @@ void MenuRunner::RunMenuAt(
   }
 
   impl_->RunMenuAt(parent, button_controller, bounds, anchor, run_types_,
-                   native_view_for_gestures, corners,
+                   native_view_for_gestures, parent_widget, corners,
                    std::move(show_menu_host_duration_histogram));
 }
 

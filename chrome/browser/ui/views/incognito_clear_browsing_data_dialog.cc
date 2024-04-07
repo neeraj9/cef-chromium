@@ -31,7 +31,9 @@ IncognitoClearBrowsingDataDialog::IncognitoClearBrowsingDataDialog(
       dialog_type_(type),
       incognito_profile_(incognito_profile) {
   DCHECK(incognito_profile_);
-  DCHECK(incognito_profile_->IsIncognitoProfile());
+  DCHECK(incognito_profile_->IsIncognitoProfile() ||
+         (incognito_profile_->IsOffTheRecord() &&
+          incognito_profile_->GetOTRProfileID().IsUniqueForCEF()));
   SetButtons(ui::DIALOG_BUTTON_NONE);
   SetShowCloseButton(true);
 

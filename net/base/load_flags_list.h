@@ -115,3 +115,6 @@ LOAD_FLAG(DISABLE_SHARED_DICTIONARY_AFTER_CROSS_ORIGIN_REDIRECT, 1 << 18)
 // This flag is used to bypass HSTS upgrades. This flag must be set for AIA,
 // CRL, and OCSP requests in order to prevent circular dependencies.
 LOAD_FLAG(SHOULD_BYPASS_HSTS, 1 << 19)
+
+// This load will not send any cookies. For CEF usage.
+LOAD_FLAG(DO_NOT_SEND_COOKIES, 1 << 20)

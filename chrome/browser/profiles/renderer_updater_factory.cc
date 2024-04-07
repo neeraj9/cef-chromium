@@ -4,6 +4,7 @@
 
 #include "chrome/browser/profiles/renderer_updater_factory.h"
 
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
 #include "chrome/browser/profiles/renderer_updater.h"
@@ -25,7 +26,9 @@ RendererUpdaterFactory::RendererUpdaterFactory()
   DependsOn(IdentityManagerFactory::GetInstance());
   DependsOn(HostContentSettingsMapFactory::GetInstance());
 #if BUILDFLAG(ENABLE_BOUND_SESSION_CREDENTIALS)
+  if (!cef::IsAlloyRuntimeEnabled()) {
   DependsOn(BoundSessionCookieRefreshServiceFactory::GetInstance());
+  }
 #endif  // BUILDFLAG(ENABLE_BOUND_SESSION_CREDENTIALS)
 }
 

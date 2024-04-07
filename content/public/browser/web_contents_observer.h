@@ -227,6 +227,9 @@ class CONTENT_EXPORT WebContentsObserver : public base::CheckedObserver {
   virtual void OnCaptureHandleConfigUpdate(
       const blink::mojom::CaptureHandleConfig& config) {}
 
+  // This method is invoked when a RenderWidget is created.
+  virtual void RenderWidgetCreated(RenderWidgetHost* render_widget_host) {}
+
   // This method is invoked when the `blink::WebView` of the current
   // RenderViewHost is ready, e.g. because we recreated it after a crash.
   virtual void RenderViewReady() {}
@@ -847,6 +850,10 @@ class CONTENT_EXPORT WebContentsObserver : public base::CheckedObserver {
   // which allows observation that the RenderWidgetHost for the
   // WebContents has gained/lost focus.
   virtual void OnFocusChangedInPage(FocusedNodeDetails* details) {}
+
+  // Notification that |render_frame_host| for this WebContents has gained
+  // focus.
+  virtual void OnFrameFocused(RenderFrameHost* render_frame_host) {}
 
   // Notifies that the manifest URL for the main frame changed to
   // |manifest_url|. This will be invoked when a document with a manifest loads

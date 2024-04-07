@@ -208,6 +208,8 @@ class NET_EXPORT CookieMonster : public CookieStore {
   CookieChangeDispatcher& GetChangeDispatcher() override;
   void SetCookieableSchemes(const std::vector<std::string>& schemes,
                             SetCookieableSchemesCallback callback) override;
+  void AddCookieableSchemes(const std::vector<std::string>& schemes,
+                            SetCookieableSchemesCallback callback) override;
   std::optional<bool> SiteHasCookieInOtherPartition(
       const net::SchemefulSite& site,
       const std::optional<CookiePartitionKey>& partition_key) const override;

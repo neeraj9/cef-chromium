@@ -195,10 +195,12 @@ class MimeHandlerViewGuest
   void ReadyToCommitNavigation(
       content::NavigationHandle* navigation_handle) final;
   void DidFinishNavigation(content::NavigationHandle* navigation_handle) final;
+  void WebContentsDestroyed() override;
 
   std::unique_ptr<MimeHandlerViewGuestDelegate> delegate_;
   std::unique_ptr<StreamContainer> stream_;
 
+  bool is_guest_attached_ = false;
   bool is_guest_fullscreen_ = false;
   bool is_embedder_fullscreen_ = false;
   bool plugin_can_save_ = false;

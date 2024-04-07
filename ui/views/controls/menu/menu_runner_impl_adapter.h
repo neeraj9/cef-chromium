@@ -44,6 +44,7 @@ class VIEWS_EXPORT MenuRunnerImplAdapter : public MenuRunnerImplInterface {
                  MenuAnchorPosition anchor,
                  int32_t types,
                  gfx::NativeView native_view_for_gestures,
+                 gfx::AcceleratedWidget parent_widget,
                  std::optional<gfx::RoundedCornersF> corners = std::nullopt,
                  std::optional<std::string> show_menu_host_duration_histogram =
                      std::nullopt) override;

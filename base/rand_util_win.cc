@@ -15,8 +15,12 @@
 
 #include "base/check.h"
 #include "base/feature_list.h"
+#include "cef/libcef/features/features.h"
+
+#if !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 #include "third_party/boringssl/src/include/openssl/crypto.h"
 #include "third_party/boringssl/src/include/openssl/rand.h"
+#endif
 
 // Prototype for ProcessPrng.
 // See: https://learn.microsoft.com/en-us/windows/win32/seccng/processprng
@@ -28,6 +32,7 @@ namespace base {
 
 namespace internal {
 
+#if !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 namespace {
 
 // The BoringSSl helpers are duplicated in rand_util_fuchsia.cc and
@@ -49,6 +54,10 @@ bool UseBoringSSLForRandBytes() {
   return g_use_boringssl.load(std::memory_order_relaxed);
 }
 
+#else  // !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
+void ConfigureBoringSSLBackedRandBytesFieldTrial() {}
+#endif
+
 }  // namespace internal
 
 namespace {
@@ -66,6 +75,7 @@ decltype(&ProcessPrng) GetProcessPrng() {
 }
 
 void RandBytes(span<uint8_t> output, bool avoid_allocation) {
+#if !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
   if (!avoid_allocation && internal::UseBoringSSLForRandBytes()) {
     // Ensure BoringSSL is initialized so it can use things like RDRAND.
     CRYPTO_library_init();
@@ -73,6 +83,7 @@ void RandBytes(span<uint8_t> output, bool avoid_allocation) {
     (void)RAND_bytes(output.data(), output.size());
     return;
   }
+#endif  // !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 
   static decltype(&ProcessPrng) process_prng_fn = GetProcessPrng();
   BOOL success =

@@ -9,6 +9,7 @@
 #include "base/functional/bind.h"
 #include "base/functional/callback.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/content_settings/content_settings_manager_delegate.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/profiles/profile.h"
@@ -46,11 +47,14 @@ RendererUpdater::RendererUpdater(Profile* profile)
 #if BUILDFLAG(ENABLE_BOUND_SESSION_CREDENTIALS)
       ,
       bound_session_cookie_refresh_service_(
+          cef::IsAlloyRuntimeEnabled() ? nullptr :
           BoundSessionCookieRefreshServiceFactory::GetForProfile(profile))
 #endif
 {
+  if (!cef::IsAlloyRuntimeEnabled()) {
   identity_manager_observation_.Observe(
       IdentityManagerFactory::GetForProfile(original_profile_));
+  }
 
 #if BUILDFLAG(IS_CHROMEOS_ASH)
   oauth2_login_manager_ =

@@ -1004,7 +1004,9 @@ void AppMenu::RunMenu(views::MenuButtonController* host) {
       host->button()->GetWidget(), host,
       host->button()->GetAnchorBoundsInScreen(),
       views::MenuAnchorPosition::kTopRight, ui::MENU_SOURCE_NONE,
-      /*native_view_for_gestures=*/gfx::NativeView(), /*corners=*/std::nullopt,
+      /*native_view_for_gestures=*/gfx::NativeView(),
+      /*parent_widget=*/gfx::kNullAcceleratedWidget,
+      /*corners=*/std::nullopt,
       "Chrome.AppMenu.MenuHostInitToNextFramePresented");
 }
 

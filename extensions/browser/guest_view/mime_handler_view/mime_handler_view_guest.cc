@@ -203,6 +203,8 @@ void MimeHandlerViewGuest::CreateWebContents(
   WebContents::CreateParams params(browser_context(),
                                    guest_site_instance.get());
   params.guest_delegate = this;
+  if (delegate_)
+    delegate_->OverrideWebContentsCreateParams(&params);
   std::move(callback).Run(std::move(owned_this),
                           WebContents::CreateWithSessionStorage(
                               params, owner_web_contents()
@@ -211,6 +213,10 @@ void MimeHandlerViewGuest::CreateWebContents(
 }
 
 void MimeHandlerViewGuest::DidAttachToEmbedder() {
+  is_guest_attached_ = true;
+  if (delegate_)
+    delegate_->OnGuestAttached();
+
   DCHECK(stream_->handler_url().SchemeIs(extensions::kExtensionScheme));
   GetController().LoadURL(stream_->handler_url(), content::Referrer(),
                           ui::PAGE_TRANSITION_AUTO_TOPLEVEL, std::string());
@@ -479,6 +485,14 @@ void MimeHandlerViewGuest::DidFinishNavigation(
     }
 #endif  // BUILDFLAG(ENABLE_PDF)
   }
+}
+
+void MimeHandlerViewGuest::WebContentsDestroyed() {
+  if (is_guest_attached_ && delegate_)
+    delegate_->OnGuestDetached();
+
+  // May delete |this|.
+  GuestView<MimeHandlerViewGuest>::WebContentsDestroyed();
 }
 
 void MimeHandlerViewGuest::FuseBeforeUnloadControl(

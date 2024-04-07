@@ -13,6 +13,7 @@
 #include "base/memory/ptr_util.h"
 #include "base/memory/raw_ptr.h"
 #include "base/values.h"
+#include "cef/libcef/features/runtime.h"
 #include "content/public/browser/render_frame_host.h"
 #include "content/public/browser/web_contents.h"
 #include "content/public/browser/web_ui.h"
@@ -56,7 +57,9 @@ class ConstrainedWebDialogDelegateUserData
 ConstrainedWebDialogUI::ConstrainedWebDialogUI(content::WebUI* web_ui)
     : WebUIController(web_ui) {
 #if BUILDFLAG(ENABLE_EXTENSIONS)
+  if (!cef::IsAlloyRuntimeEnabled()) {
   extensions::TabHelper::CreateForWebContents(web_ui->GetWebContents());
+  }
 #endif
 }
 

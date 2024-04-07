@@ -94,6 +94,13 @@ struct CONTENT_EXPORT ContentMainParams {
   }
 };
 
+// Split RunContentProcess() into separate stages.
+CONTENT_EXPORT int ContentMainInitialize(
+    ContentMainParams params,
+    ContentMainRunner* content_main_runner);
+CONTENT_EXPORT int ContentMainRun(ContentMainRunner* content_main_runner);
+CONTENT_EXPORT void ContentMainShutdown(ContentMainRunner* content_main_runner);
+
 CONTENT_EXPORT int RunContentProcess(ContentMainParams params,
                                      ContentMainRunner* content_main_runner);
 

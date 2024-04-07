@@ -175,6 +175,18 @@ Widget::MoveLoopResult DesktopWindowTreeHostLinux::RunMoveLoop(
   return result;
 }
 
+gfx::Rect DesktopWindowTreeHostLinux::GetWindowBoundsInScreen() const {
+  if (!screen_bounds_.IsEmpty())
+    return screen_bounds_;
+  return DesktopWindowTreeHostPlatform::GetWindowBoundsInScreen();
+}
+
+gfx::Point DesktopWindowTreeHostLinux::GetLocationOnScreenInPixels() const {
+  if (!screen_bounds_.IsEmpty())
+    return screen_bounds_.origin();
+  return DesktopWindowTreeHostPlatform::GetLocationOnScreenInPixels();
+}
+
 void DesktopWindowTreeHostLinux::DispatchEvent(ui::Event* event) {
   // In Windows, the native events sent to chrome are separated into client
   // and non-client versions of events, which we record on our LocatedEvent
@@ -297,6 +309,8 @@ void DesktopWindowTreeHostLinux::AddAdditionalInitProperties(
   properties->wm_role_name = params.wm_role_name;
 
   properties->wayland_app_id = params.wayland_app_id;
+
+  properties->parent_widget = params.parent_widget;
 
   DCHECK(!properties->x11_extension_delegate);
   properties->x11_extension_delegate = this;

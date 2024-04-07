@@ -23,6 +23,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "base/time/time.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/enterprise/connectors/analysis/analysis_settings.h"
 #include "chrome/browser/enterprise/connectors/analysis/content_analysis_dialog.h"
@@ -317,6 +318,9 @@ bool ContentAnalysisDelegate::IsEnabled(Profile* profile,
                                         GURL url,
                                         Data* data,
                                         AnalysisConnector connector) {
+  if (cef::IsAlloyRuntimeEnabled())
+    return false;
+
   auto* service = ConnectorsServiceFactory::GetForBrowserContext(profile);
   // If the corresponding Connector policy isn't set, don't perform scans.
   if (!service || !service->IsConnectorEnabled(connector))

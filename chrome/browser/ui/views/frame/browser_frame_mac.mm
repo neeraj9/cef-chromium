@@ -182,7 +182,14 @@ void BrowserFrameMac::OnWindowFullscreenTransitionComplete() {
 void BrowserFrameMac::ValidateUserInterfaceItem(
     int32_t tag,
     remote_cocoa::mojom::ValidateUserInterfaceItemResult* result) {
-  Browser* browser = browser_view_->browser();
+  return ValidateUserInterfaceItem(browser_view_->browser(), tag, result);
+}
+
+// static
+void BrowserFrameMac::ValidateUserInterfaceItem(
+    Browser* browser,
+    int32_t tag,
+    remote_cocoa::mojom::ValidateUserInterfaceItemResult* result) {
   if (!chrome::SupportsCommand(browser, tag)) {
     result->enable = false;
     return;
@@ -310,8 +317,16 @@ bool BrowserFrameMac::WillExecuteCommand(
     int32_t command,
     WindowOpenDisposition window_open_disposition,
     bool is_before_first_responder) {
-  Browser* browser = browser_view_->browser();
+  return WillExecuteCommand(browser_view_->browser(), command,
+                            window_open_disposition, is_before_first_responder);
+}
 
+// static
+bool BrowserFrameMac::WillExecuteCommand(
+    Browser* browser,
+    int32_t command,
+    WindowOpenDisposition window_open_disposition,
+    bool is_before_first_responder) {
   if (is_before_first_responder) {
     // The specification for this private extensions API is incredibly vague.
     // For now, we avoid triggering chrome commands prior to giving the
@@ -342,11 +357,20 @@ bool BrowserFrameMac::ExecuteCommand(
     int32_t command,
     WindowOpenDisposition window_open_disposition,
     bool is_before_first_responder) {
-  if (!WillExecuteCommand(command, window_open_disposition,
-                          is_before_first_responder))
-    return false;
+  return ExecuteCommand(browser_view_->browser(), command,
+                        window_open_disposition, is_before_first_responder);
+}
 
-  Browser* browser = browser_view_->browser();
+// static
+bool BrowserFrameMac::ExecuteCommand(
+    Browser* browser,
+    int32_t command,
+    WindowOpenDisposition window_open_disposition,
+    bool is_before_first_responder) {
+  if (!WillExecuteCommand(browser, command, window_open_disposition,
+                          is_before_first_responder)) {
+    return false;
+  }
 
   chrome::ExecuteCommandWithDisposition(browser, command,
                                         window_open_disposition);

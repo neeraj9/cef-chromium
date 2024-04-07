@@ -191,7 +191,7 @@ class TabstripLikeBackground : public views::Background {
   void Paint(gfx::Canvas* canvas, views::View* view) const override {
     bool painted = TopContainerBackground::PaintThemeCustomImage(canvas, view,
                                                                  browser_view_);
-    if (!painted) {
+    if (!painted && browser_view_->frame()->GetFrameView()) {
       SkColor frame_color =
           browser_view_->frame()->GetFrameView()->GetFrameColor(
               BrowserFrameActiveState::kUseCurrent);
@@ -221,12 +221,13 @@ END_METADATA
 ////////////////////////////////////////////////////////////////////////////////
 // ToolbarView, public:
 
-ToolbarView::ToolbarView(Browser* browser, BrowserView* browser_view)
+ToolbarView::ToolbarView(Browser* browser, BrowserView* browser_view,
+                         absl::optional<DisplayMode> display_mode)
     : AnimationDelegateViews(this),
       browser_(browser),
       browser_view_(browser_view),
       app_menu_icon_controller_(browser->profile(), this),
-      display_mode_(GetDisplayMode(browser)) {
+      display_mode_(display_mode ? *display_mode : GetDisplayMode(browser)) {
   SetID(VIEW_ID_TOOLBAR);
 
   container_view_ = AddChildView(std::make_unique<ContainerView>());
@@ -251,6 +252,19 @@ ToolbarView::~ToolbarView() {
 }
 
 void ToolbarView::Init() {
+#if BUILDFLAG(ENABLE_CEF)
+  using ToolbarButtonType = cef::BrowserDelegate::ToolbarButtonType;
+  auto button_visible = [this](ToolbarButtonType type) {
+    if (this->browser_->cef_delegate()) {
+      return this->browser_->cef_delegate()->IsToolbarButtonVisible(type);
+    }
+    return true;
+  };
+  #define BUTTON_VISIBLE(type) button_visible(ToolbarButtonType::type)
+#else
+  #define BUTTON_VISIBLE(type) true
+#endif
+
 #if defined(USE_AURA)
   // Avoid generating too many occlusion tracking calculation events before this
   // function returns. The occlusion status will be computed only once once this
@@ -275,12 +289,12 @@ void ToolbarView::Init() {
 
   auto location_bar = std::make_unique<LocationBarView>(
       browser_, browser_->profile(), browser_->command_controller(), this,
-      display_mode_ != DisplayMode::NORMAL);
+      display_mode_ != DisplayMode::NORMAL && !browser_->toolbar_overridden());
   // Make sure the toolbar shows by default.
   size_animation_.Reset(1);
 
   std::unique_ptr<DownloadToolbarButtonView> download_button;
-  if (download::IsDownloadBubbleEnabled()) {
+  if (download::IsDownloadBubbleEnabled() && BUTTON_VISIBLE(kDownload)) {
     download_button =
         std::make_unique<DownloadToolbarButtonView>(browser_view_);
   }
@@ -362,8 +376,10 @@ void ToolbarView::Init() {
     }
   }
   std::unique_ptr<media_router::CastToolbarButton> cast;
-  if (media_router::MediaRouterEnabled(browser_->profile()))
+  if (media_router::MediaRouterEnabled(browser_->profile()) &&
+      BUTTON_VISIBLE(kCast)) {
     cast = media_router::CastToolbarButton::Create(browser_);
+  }
 
   std::unique_ptr<MediaToolbarButtonView> media_button;
   if (base::FeatureList::IsEnabled(media::kGlobalMediaControls)) {
@@ -373,7 +389,8 @@ void ToolbarView::Init() {
 
   std::unique_ptr<send_tab_to_self::SendTabToSelfToolbarIconView>
       send_tab_to_self_button;
-  if (!browser_->profile()->IsOffTheRecord()) {
+  if (!browser_->profile()->IsOffTheRecord() &&
+      BUTTON_VISIBLE(kSendTabToSelf)) {
     send_tab_to_self_button =
         std::make_unique<send_tab_to_self::SendTabToSelfToolbarIconView>(
             browser_view_);
@@ -452,7 +469,7 @@ void ToolbarView::Init() {
     send_tab_to_self_button_ =
         container_view_->AddChildView(std::move(send_tab_to_self_button));
 
-  if (!features::IsSidePanelPinningEnabled()) {
+  if (!features::IsSidePanelPinningEnabled() && BUTTON_VISIBLE(kSidePanel)) {
     if (companion::IsCompanionFeatureEnabled()) {
       side_panel_container_ = container_view_->AddChildView(
           std::make_unique<SidePanelToolbarContainer>(browser_view_));
@@ -811,7 +828,7 @@ void ToolbarView::Layout(PassKey) {
   if (display_mode_ == DisplayMode::NORMAL) {
     LayoutCommon();
 
-    if (features::IsChromeRefresh2023()) {
+    if (features::IsChromeRefresh2023() && !browser_->toolbar_overridden()) {
       UpdateClipPath();
     }
   }

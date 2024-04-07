@@ -68,6 +68,13 @@ PluginUtils::GetMimeTypeToExtensionIdMap(
     content::BrowserContext* browser_context) {
   base::flat_map<std::string, std::string> mime_type_to_extension_id_map;
 #if BUILDFLAG(ENABLE_EXTENSIONS)
+  // May be nullptr if using CEF Alloy with extensions disabled.
+  extensions::ExtensionRegistry* registry =
+      extensions::ExtensionRegistry::Get(browser_context);
+  if (!registry) {
+    return mime_type_to_extension_id_map;
+  }
+
   Profile* profile = Profile::FromBrowserContext(browser_context);
   if (extensions::ChromeContentBrowserClientExtensionsPart::
           AreExtensionsDisabledForProfile(profile)) {
@@ -78,9 +85,6 @@ PluginUtils::GetMimeTypeToExtensionIdMap(
       MimeTypesHandler::GetMIMETypeAllowlist();
   // Go through the allowed extensions and try to use them to intercept
   // the URL request.
-  extensions::ExtensionRegistry* registry =
-      extensions::ExtensionRegistry::Get(browser_context);
-  DCHECK(registry);
   for (const std::string& extension_id : allowlist) {
     const extensions::Extension* extension =
         registry->enabled_extensions().GetByID(extension_id);

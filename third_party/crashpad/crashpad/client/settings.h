@@ -156,6 +156,11 @@ class Settings {
                             time_t lockfile_ttl);
 #endif  // !CRASHPAD_FLOCK_ALWAYS_SUPPORTED
 
+  bool GetNextUploadAttemptTime(time_t* time);
+  bool SetNextUploadAttemptTime(time_t time);
+  bool GetBackoffStep(int* step);
+  bool SetBackoffStep(int step);
+
  private:
   struct Data;
 

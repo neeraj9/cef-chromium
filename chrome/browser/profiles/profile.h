@@ -103,6 +103,10 @@ class Profile : public content::BrowserContext {
     // be applicable to run. Please see crbug.com/1098697#c3 for more details.
     static OTRProfileID CreateUnique(const std::string& profile_id_prefix);
 
+    // Creates a unique OTR profile id to be used for CEF browser contexts.
+    static OTRProfileID CreateUniqueForCEF();
+    bool IsUniqueForCEF() const;
+
     // Creates a unique OTR profile id to be used for DevTools browser contexts.
     static OTRProfileID CreateUniqueForDevTools();
 
@@ -522,6 +526,8 @@ class Profile : public content::BrowserContext {
     return instant_service_;
   }
 
+  void NotifyOffTheRecordProfileCreated(Profile* off_the_record);
+
  protected:
   // Creates an OffTheRecordProfile which points to this Profile.
   static std::unique_ptr<Profile> CreateOffTheRecordProfile(
@@ -533,7 +539,6 @@ class Profile : public content::BrowserContext {
   static PrefStore* CreateExtensionPrefStore(Profile*,
                                              bool incognito_pref_store);
 
-  void NotifyOffTheRecordProfileCreated(Profile* off_the_record);
   void NotifyProfileInitializationComplete();
 
   // Returns whether the user has signed in this profile to an account.

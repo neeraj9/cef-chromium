@@ -1623,7 +1623,8 @@ bool RenderProcessHostImpl::Init() {
   // initialized because in tests the factory may never have been initialized.
   if (!GetBrowserContext()->IsOffTheRecord() &&
       !base::CommandLine::ForCurrentProcess()->HasSwitch(
-          switches::kDisableGpuShaderDiskCache)) {
+          switches::kDisableGpuShaderDiskCache) &&
+      !storage_partition_impl_->GetPath().empty()) {
     if (auto* cache_factory = GetGpuDiskCacheFactorySingleton()) {
       for (const gpu::GpuDiskCacheType type : gpu::kGpuDiskCacheTypes) {
         auto handle = cache_factory->GetCacheHandle(

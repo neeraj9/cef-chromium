@@ -39,16 +39,17 @@ class VIZ_HOST_EXPORT HostDisplayClient : public mojom::DisplayClient {
   gfx::AcceleratedWidget widget() const { return widget_; }
 #endif
 
- private:
   // mojom::DisplayClient implementation:
+  void UseProxyOutputDevice(UseProxyOutputDeviceCallback callback) override;
+
 #if BUILDFLAG(IS_APPLE)
   void OnDisplayReceivedCALayerParams(
       const gfx::CALayerParams& ca_layer_params) override;
 #endif
 
-#if BUILDFLAG(IS_WIN)
   void CreateLayeredWindowUpdater(
       mojo::PendingReceiver<mojom::LayeredWindowUpdater> receiver) override;
+#if BUILDFLAG(IS_WIN)
   void AddChildWindowToBrowser(gpu::SurfaceHandle child_window) override;
 #endif
 

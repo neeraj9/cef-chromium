@@ -108,13 +108,15 @@ interface DisplayPrivate {
 
 // DisplayClient allows privileged clients to receive events from the Display.
 interface DisplayClient {
+  [Sync]
+  UseProxyOutputDevice() => (bool success);
+
   // Called when new Core Animation Layer params are received.
   [EnableIf=is_apple]
   OnDisplayReceivedCALayerParams(gfx.mojom.CALayerParams ca_layer_params);
 
   // Creates a LayeredWindowUpdater implementation to draw into a layered
   // window.
-  [EnableIf=is_win]
   CreateLayeredWindowUpdater(pending_receiver<LayeredWindowUpdater> receiver);
 
   // Sends the created child window to the browser process so that it can be

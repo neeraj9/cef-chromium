@@ -18,6 +18,7 @@
 #include "build/chromecast_buildflags.h"
 #include "build/chromeos_buildflags.h"
 #include "cc/base/switches.h"
+#include "cef/libcef/browser/osr/software_output_device_proxy.h"
 #include "components/viz/common/display/renderer_settings.h"
 #include "components/viz/common/features.h"
 #include "components/viz/common/frame_sinks/begin_frame_source.h"
@@ -31,6 +32,7 @@
 #include "gpu/command_buffer/service/scheduler_sequence.h"
 #include "gpu/config/gpu_finch_features.h"
 #include "gpu/ipc/common/surface_handle.h"
+#include "mojo/public/cpp/bindings/sync_call_restrictions.h"
 #include "ui/base/ui_base_switches.h"
 
 #if BUILDFLAG(IS_WIN)
@@ -145,6 +147,20 @@ OutputSurfaceProviderImpl::CreateSoftwareOutputDeviceForPlatform(
     mojom::DisplayClient* display_client) {
   if (headless_)
     return std::make_unique<SoftwareOutputDevice>();
+
+  {
+    mojo::ScopedAllowSyncCallForTesting allow_sync;
+    DCHECK(display_client);
+    bool use_proxy_output_device = false;
+    if (display_client->UseProxyOutputDevice(&use_proxy_output_device) &&
+        use_proxy_output_device) {
+      mojo::PendingRemote<mojom::LayeredWindowUpdater> layered_window_updater;
+      display_client->CreateLayeredWindowUpdater(
+          layered_window_updater.InitWithNewPipeAndPassReceiver());
+      return std::make_unique<SoftwareOutputDeviceProxy>(
+          std::move(layered_window_updater));
+    }
+  }
 
 #if BUILDFLAG(IS_WIN)
   return CreateSoftwareOutputDeviceWin(surface_handle, &output_device_backing_,

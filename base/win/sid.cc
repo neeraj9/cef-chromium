@@ -17,6 +17,7 @@
 #include <utility>
 
 #include "base/check.h"
+#include "base/notreached.h"
 #include "base/no_destructor.h"
 #include "base/rand_util.h"
 #include "base/ranges/algorithm.h"
@@ -24,8 +25,12 @@
 #include "base/win/scoped_handle.h"
 #include "base/win/scoped_localalloc.h"
 #include "base/win/windows_version.h"
+#include "cef/libcef/features/features.h"
+
+#if !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 #include "third_party/boringssl/src/include/openssl/crypto.h"
 #include "third_party/boringssl/src/include/openssl/sha.h"
+#endif
 
 namespace base::win {
 
@@ -126,6 +131,7 @@ Sid Sid::FromNamedCapability(const std::wstring& capability_name) {
   if (known_cap != known_capabilities->end()) {
     return FromKnownCapability(known_cap->second);
   }
+#if !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
   CRYPTO_library_init();
   static_assert((SHA256_DIGEST_LENGTH / sizeof(DWORD)) ==
                 SECURITY_APP_PACKAGE_RID_COUNT);
@@ -138,6 +144,10 @@ Sid Sid::FromNamedCapability(const std::wstring& capability_name) {
          reinterpret_cast<uint8_t*>(&rids[2]));
   return FromSubAuthorities(SECURITY_APP_PACKAGE_AUTHORITY, std::size(rids),
                             rids);
+#else
+  NOTREACHED();
+  return Sid(WellKnownSid::kNull);
+#endif
 }
 
 Sid Sid::FromKnownSid(WellKnownSid type) {

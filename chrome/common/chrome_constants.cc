@@ -6,6 +6,7 @@
 
 #include "build/branding_buildflags.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/features.h"
 #include "chrome/common/chrome_version.h"
 
 #define FPL FILE_PATH_LITERAL
@@ -100,7 +101,12 @@ const char kMacHelperSuffixAlerts[] = " (Alerts)";
 #endif  // BUILDFLAG(IS_MAC)
 
 #if BUILDFLAG(IS_WIN)
-const base::FilePath::CharType kBrowserResourcesDll[] = FPL("chrome.dll");
+const base::FilePath::CharType kBrowserResourcesDll[] =
+#if BUILDFLAG(ENABLE_CEF)
+    FPL("libcef.dll");
+#else
+    FPL("chrome.dll");
+#endif
 const base::FilePath::CharType kElfDll[] = FPL("chrome_elf.dll");
 const base::FilePath::CharType kStatusTrayWindowClass[] =
     FPL("Chrome_StatusTrayWindow");

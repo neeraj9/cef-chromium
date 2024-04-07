@@ -116,6 +116,7 @@ void MenuRunnerImpl::RunMenuAt(
     MenuAnchorPosition anchor,
     int32_t run_types,
     gfx::NativeView native_view_for_gestures,
+    gfx::AcceleratedWidget parent_widget,
     std::optional<gfx::RoundedCornersF> corners,
     std::optional<std::string> show_menu_host_duration_histogram) {
   closing_event_time_ = base::TimeTicks();
@@ -189,7 +190,7 @@ void MenuRunnerImpl::RunMenuAt(
   controller->Run(parent, button_controller, menu_.get(), bounds, anchor,
                   (run_types & MenuRunner::CONTEXT_MENU) != 0,
                   (run_types & MenuRunner::NESTED_DRAG) != 0,
-                  native_view_for_gestures);
+                  native_view_for_gestures, parent_widget);
 }
 
 void MenuRunnerImpl::Cancel() {

@@ -8,6 +8,7 @@
 #include "build/branding_buildflags.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/features.h"
 #include "extensions/buildflags/buildflags.h"
 #include "third_party/widevine/cdm/buildflags.h"
 
@@ -48,7 +49,7 @@ enum {
   DIR_INTERNAL_PLUGINS,        // Directory where internal plugins reside.
   DIR_COMPONENTS,              // Directory where built-in implementations of
                                // component-updated libraries or data reside.
-#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
+#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC) && !BUILDFLAG(ENABLE_CEF)
   DIR_POLICY_FILES,  // Directory for system-wide read-only
                      // policy files that allow sys-admins
                      // to set policies for chrome. This directory

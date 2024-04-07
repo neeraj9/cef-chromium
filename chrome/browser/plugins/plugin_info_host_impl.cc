@@ -140,6 +140,10 @@ bool IsPluginLoadingAccessibleResourceInWebView(
     extensions::ExtensionRegistry* extension_registry,
     int process_id,
     const GURL& resource) {
+  // May be nullptr if using CEF Alloy with extensions disabled.
+  if (!extension_registry)
+    return false;
+
   extensions::WebViewRendererState* renderer_state =
       extensions::WebViewRendererState::GetInstance();
   std::string partition_id;

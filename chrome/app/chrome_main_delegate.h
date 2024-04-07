@@ -49,6 +49,8 @@ class ChromeMainDelegate : public content::ContentMainDelegate {
 
   ~ChromeMainDelegate() override;
 
+  virtual void CleanupOnUIThread();
+
  protected:
   // content::ContentMainDelegate:
   std::optional<int> BasicStartupComplete() override;
@@ -98,7 +100,7 @@ class ChromeMainDelegate : public content::ContentMainDelegate {
 
   ChromeContentClient chrome_content_client_;
 
-  memory_system::MemorySystem memory_system_;
+  std::unique_ptr<memory_system::MemorySystem> memory_system_;
 
 #if BUILDFLAG(IS_CHROMEOS_LACROS)
   std::unique_ptr<chromeos::LacrosService> lacros_service_;

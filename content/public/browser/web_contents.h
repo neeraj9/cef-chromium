@@ -101,10 +101,12 @@ class BrowserContext;
 class BrowserPluginGuestDelegate;
 class RenderFrameHost;
 class RenderViewHost;
+class RenderViewHostDelegateView;
 class RenderWidgetHostView;
 class ScreenOrientationDelegate;
 class SiteInstance;
 class WebContentsDelegate;
+class WebContentsView;
 class WebUI;
 struct DropData;
 struct MHTMLGenerationParams;
@@ -250,6 +252,10 @@ class WebContents : public PageNavigator,
     // Sandboxing flags set on the new WebContents.
     network::mojom::WebSandboxFlags starting_sandbox_flags =
         network::mojom::WebSandboxFlags::kNone;
+
+    // Optionally specify the view and delegate view.
+    content::WebContentsView* view = nullptr;
+    content::RenderViewHostDelegateView* delegate_view = nullptr;
 
     // Value used to set the last time the WebContents was made active, this is
     // the value that'll be returned by GetLastActiveTime(). If this is left

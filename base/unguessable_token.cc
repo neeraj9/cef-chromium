@@ -10,8 +10,9 @@
 #include "base/format_macros.h"
 #include "base/rand_util.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/features.h"
 
-#if !BUILDFLAG(IS_NACL)
+#if !BUILDFLAG(IS_NACL) && !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 #include "third_party/boringssl/src/include/openssl/mem.h"
 #endif
 
@@ -57,7 +58,7 @@ absl::optional<UnguessableToken> UnguessableToken::DeserializeFromString(
 }
 
 bool operator==(const UnguessableToken& lhs, const UnguessableToken& rhs) {
-#if BUILDFLAG(IS_NACL)
+#if BUILDFLAG(IS_NACL) || BUILDFLAG(IS_CEF_SANDBOX_BUILD)
   // BoringSSL is unavailable for NaCl builds so it remains timing dependent.
   return lhs.token_ == rhs.token_;
 #else

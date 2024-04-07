@@ -28,6 +28,12 @@ ContentsWebView::ContentsWebView(content::BrowserContext* browser_context)
     : views::WebView(browser_context),
       status_bubble_(nullptr) {
   SetProperty(views::kElementIdentifierKey, kContentsWebViewElementId);
+
+  // Mouse events on draggable regions will not be handled by the WebView.
+  // Avoid the resulting DCHECK in NativeViewHost::OnMousePressed by
+  // configuring the NativeViewHost not to process events via the view
+  // hierarchy.
+  holder()->SetCanProcessEventsWithinSubtree(false);
 }
 
 ContentsWebView::~ContentsWebView() {

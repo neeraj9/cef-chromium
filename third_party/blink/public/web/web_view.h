@@ -349,6 +349,7 @@ class BLINK_EXPORT WebView {
 
   // Sets whether select popup menus should be rendered by the browser.
   static void SetUseExternalPopupMenus(bool);
+  virtual void SetUseExternalPopupMenusThisInstance(bool) = 0;
 
   // Cancels and hides the current popup (datetime, select...) if any.
   virtual void CancelPagePopup() = 0;

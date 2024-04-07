@@ -285,7 +285,7 @@ class [[clang::lto_visibility_public]] TargetPolicy {
   // Adds a blob of data that will be made available in the child early in
   // startup via sandbox::GetDelegateData(). The contents of this data should
   // not vary between children with the same TargetConfig().
-  virtual void AddDelegateData(base::span<const uint8_t> data) = 0;
+  virtual void AddDelegateData(base::span<uint8_t> data) = 0;
 };
 
 }  // namespace sandbox

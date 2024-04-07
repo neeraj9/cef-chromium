@@ -298,9 +298,11 @@ void MemoryDetails::CollectChildInfoOnUIThread() {
                 render_process_host->GetBrowserContext())) {
       content::BrowserContext* context =
           render_process_host->GetBrowserContext();
+
+      // May be nullptr if using CEF Alloy with extensions disabled.
       extensions::ExtensionRegistry* extension_registry =
           extensions::ExtensionRegistry::Get(context);
-      DCHECK(extension_registry);
+      if (extension_registry) {
       extension_set = &extension_registry->enabled_extensions();
       extensions::ProcessMap* process_map =
           extensions::ProcessMap::Get(context);
@@ -316,6 +318,7 @@ void MemoryDetails::CollectChildInfoOnUIThread() {
           process.renderer_type = ProcessMemoryInformation::RENDERER_EXTENSION;
           break;
         }
+      }
       }
     }
 #endif

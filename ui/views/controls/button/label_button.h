@@ -172,6 +172,9 @@ class VIEWS_EXPORT LabelButton : public Button, public NativeThemeDelegate {
   // widget, and the parent of the containing widget.
   ButtonState GetVisualState() const;
 
+  // Sets the font list used by this button.
+  void SetFontList(const gfx::FontList& font_list);
+
  protected:
   LabelButtonImageContainer* image_container() {
     return image_container_.get();

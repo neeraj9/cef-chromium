@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "content/public/browser/web_contents.h"
+
 namespace content {
 class RenderFrameHost;
 struct ContextMenuParams;
@@ -24,6 +26,14 @@ class MimeHandlerViewGuestDelegate {
       delete;
 
   virtual ~MimeHandlerViewGuestDelegate() {}
+
+  // Provides an opportunity to supply a custom view implementation.
+  virtual void OverrideWebContentsCreateParams(
+      content::WebContents::CreateParams* params) {}
+
+  // Called when a guest is attached or detached.
+  virtual void OnGuestAttached() {}
+  virtual void OnGuestDetached() {}
 
   // Handles context menu, or returns false if unhandled.
   //

@@ -581,6 +581,14 @@ void OpenNewWindowForFirstRun(
                                 /*restore_tabbed_browser=*/true);
 }
 #endif  // BUILDFLAG(IS_CHROMEOS_LACROS) || BUILDFLAG(ENABLE_DICE_SUPPORT)
+
+StartupBrowserCreator::ProcessCommandLineCallback*
+GetProcessCommandLineCallback() {
+  static base::NoDestructor<StartupBrowserCreator::ProcessCommandLineCallback>
+      callback;
+  return callback.get();
+}
+
 }  // namespace
 
 StartupProfileMode StartupProfileModeFromReason(
@@ -1458,11 +1466,22 @@ void StartupBrowserCreator::ProcessCommandLineWithProfile(
 }
 
 // static
+void StartupBrowserCreator::RegisterProcessCommandLineCallback(
+    ProcessCommandLineCallback cb) {
+  *GetProcessCommandLineCallback() = cb;
+}
+
+// static
 void StartupBrowserCreator::ProcessCommandLineAlreadyRunning(
     const base::CommandLine& command_line,
     const base::FilePath& cur_dir,
     const StartupProfilePathInfo& profile_path_info) {
   if (profile_path_info.reason == StartupProfileModeReason::kError) {
+    return;
+  }
+
+  auto* cb = GetProcessCommandLineCallback();
+  if (!cb->is_null() && cb->Run(command_line, cur_dir)) {
     return;
   }
 

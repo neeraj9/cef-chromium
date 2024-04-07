@@ -1015,6 +1015,13 @@ ResultCode SandboxWin::StartSandboxedProcess(
     const base::HandlesToInheritVector& handles_to_inherit,
     SandboxDelegate* delegate,
     base::Process* process) {
+  // Will be nullptr if SandboxInterfaceInfo was not initialized by the CEF
+  // client, meaning that the sandbox is implicitly disabled.
+  if (!g_broker_services) {
+    return LaunchWithoutSandbox(cmd_line, handles_to_inherit, delegate,
+                                process);
+  }
+
   SandboxLaunchTimer timer;
 
   // Avoid making a policy if we won't use it.

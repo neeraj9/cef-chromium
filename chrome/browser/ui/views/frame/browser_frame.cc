@@ -114,15 +114,23 @@ ui::ColorProviderKey::SchemeVariant GetSchemeVariant(
 ////////////////////////////////////////////////////////////////////////////////
 // BrowserFrame, public:
 
+BrowserFrame::BrowserFrame() : BrowserFrame(nullptr) {}
+
 BrowserFrame::BrowserFrame(BrowserView* browser_view)
     : native_browser_frame_(nullptr),
       root_view_(nullptr),
       browser_frame_view_(nullptr),
-      browser_view_(browser_view) {
-  browser_view_->set_frame(this);
+      browser_view_(nullptr) {
   set_is_secondary_widget(false);
   // Don't focus anything on creation, selecting a tab will set the focus.
   set_focus_on_creation(false);
+  if (browser_view)
+    InitBrowserView(browser_view);
+}
+
+void BrowserFrame::InitBrowserView(BrowserView* browser_view) {
+  browser_view_ = browser_view;
+  browser_view_->set_frame(this);
 }
 
 BrowserFrame::~BrowserFrame() {}
@@ -228,10 +236,20 @@ void BrowserFrame::LayoutWebAppWindowTitle(
 }
 
 int BrowserFrame::GetTopInset() const {
+  if (!browser_frame_view_) {
+    // With CEF the browser may already be part of a larger Views layout. Zero
+    // out the adjustment in BrowserView::GetTopInsetInBrowserView() so that
+    // the browser isn't shifted to the top of the window.
+    return browser_view_->y();
+  }
   return browser_frame_view_->GetTopInset(false);
 }
 
 void BrowserFrame::UpdateThrobber(bool running) {
+  if (!browser_frame_view_) {
+    // Not supported with CEF Views-hosted DevTools windows.
+    return;
+  }
   browser_frame_view_->UpdateThrobber(running);
 }
 
@@ -240,6 +258,8 @@ BrowserNonClientFrameView* BrowserFrame::GetFrameView() const {
 }
 
 bool BrowserFrame::UseCustomFrame() const {
+  if (!native_browser_frame_)
+    return true;
   return native_browser_frame_->UseCustomFrame();
 }
 
@@ -253,20 +273,30 @@ bool BrowserFrame::ShouldDrawFrameHeader() const {
 
 void BrowserFrame::GetWindowPlacement(gfx::Rect* bounds,
                                       ui::WindowShowState* show_state) const {
+  if (!native_browser_frame_) {
+    *show_state = ui::SHOW_STATE_DEFAULT;
+    return;
+  }
   return native_browser_frame_->GetWindowPlacement(bounds, show_state);
 }
 
 content::KeyboardEventProcessingResult BrowserFrame::PreHandleKeyboardEvent(
     const content::NativeWebKeyboardEvent& event) {
+  if (!native_browser_frame_)
+    return content::KeyboardEventProcessingResult::NOT_HANDLED;
   return native_browser_frame_->PreHandleKeyboardEvent(event);
 }
 
 bool BrowserFrame::HandleKeyboardEvent(
     const content::NativeWebKeyboardEvent& event) {
+  if (!native_browser_frame_)
+    return false;
   return native_browser_frame_->HandleKeyboardEvent(event);
 }
 
 void BrowserFrame::OnBrowserViewInitViewsComplete() {
+  if (!browser_frame_view_)
+    return;
   browser_frame_view_->OnBrowserViewInitViewsComplete();
 }
 
@@ -367,6 +397,8 @@ ui::ColorProviderKey::ThemeInitializerSupplier* BrowserFrame::GetCustomTheme()
 }
 
 void BrowserFrame::OnNativeWidgetWorkspaceChanged() {
+  if (!browser_view_)
+    return;
   chrome::SaveWindowWorkspace(browser_view_->browser(), GetWorkspace());
   chrome::SaveWindowVisibleOnAllWorkspaces(browser_view_->browser(),
                                            IsVisibleOnAllWorkspaces());
@@ -483,6 +515,8 @@ void BrowserFrame::OnNativeThemeUpdated(ui::NativeTheme* observed_theme) {
 
 ui::ColorProviderKey BrowserFrame::GetColorProviderKey() const {
   auto key = Widget::GetColorProviderKey();
+  if (!browser_view_)
+    return key;
 
   key.app_controller = browser_view_->browser()->app_controller();
 
@@ -637,5 +671,8 @@ bool BrowserFrame::RegenerateFrameOnThemeChange(
 }
 
 bool BrowserFrame::IsIncognitoBrowser() const {
+  if (!browser_view_) {
+    return true;
+  }
   return browser_view_->browser()->profile()->IsIncognitoProfile();
 }

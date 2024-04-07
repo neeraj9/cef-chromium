@@ -9,6 +9,7 @@
 #include "base/feature_list.h"
 #include "build/build_config.h"
 #include "build/buildflag.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/content_settings/one_time_permission_provider.h"
 #include "chrome/browser/permissions/one_time_permissions_tracker_factory.h"
 #include "chrome/browser/profiles/off_the_record_profile_impl.h"
@@ -23,6 +24,10 @@
 #include "content/public/browser/browser_thread.h"
 #include "extensions/buildflags/buildflags.h"
 #include "ui/webui/webui_allowlist_provider.h"
+
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/common/extensions/extensions_util.h"
+#endif
 
 #if BUILDFLAG(ENABLE_EXTENSIONS)
 #include "base/trace_event/trace_event.h"
@@ -64,7 +69,13 @@ HostContentSettingsMapFactory::HostContentSettingsMapFactory()
 #endif
   DependsOn(OneTimePermissionsTrackerFactory::GetInstance());
 #if BUILDFLAG(ENABLE_EXTENSIONS)
+#if BUILDFLAG(ENABLE_CEF)
+  if (!cef::IsAlloyRuntimeEnabled() || extensions::ExtensionsEnabled()) {
+#endif
   DependsOn(extensions::ContentSettingsService::GetFactoryInstance());
+#if BUILDFLAG(ENABLE_CEF)
+  }
+#endif
 #endif
   // Used by way of ShouldRestoreOldSessionCookies().
 #if BUILDFLAG(ENABLE_SESSION_SERVICE)
@@ -118,6 +129,9 @@ scoped_refptr<RefcountedKeyedService>
       std::move(allowlist_provider));
 
 #if BUILDFLAG(ENABLE_EXTENSIONS)
+#if BUILDFLAG(ENABLE_CEF)
+  if (!cef::IsAlloyRuntimeEnabled() || extensions::ExtensionsEnabled()) {
+#endif
   // These must be registered before before the HostSettings are passed over to
   // the IOThread.  Simplest to do this on construction.
   settings_map->RegisterProvider(
@@ -130,6 +144,9 @@ scoped_refptr<RefcountedKeyedService>
           // the case where profile->IsOffTheRecord() is true? And what is the
           // interaction with profile->IsGuestSession()?
           false));
+#if BUILDFLAG(ENABLE_CEF)
+  }
+#endif
 #endif // BUILDFLAG(ENABLE_EXTENSIONS)
 #if BUILDFLAG(ENABLE_SUPERVISED_USERS)
   supervised_user::SupervisedUserSettingsService* supervised_service =

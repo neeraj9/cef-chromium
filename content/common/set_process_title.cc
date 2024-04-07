@@ -54,7 +54,7 @@ void SetProcessTitleFromCommandLine(const char** main_argv) {
   bool have_argv0 = false;
 
 #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
-  DCHECK_EQ(base::PlatformThread::CurrentId(), getpid());
+  // DCHECK_EQ(base::PlatformThread::CurrentId(), getpid());
 
   if (main_argv)
     setproctitle_init(main_argv);

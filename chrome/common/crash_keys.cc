@@ -6,6 +6,8 @@
 
 #include <deque>
 
+#include <iterator>
+
 #include "base/base_switches.h"
 #include "base/command_line.h"
 #include "base/format_macros.h"
@@ -100,8 +102,10 @@ void HandleEnableDisableFeatures(const base::CommandLine& command_line) {
       "commandline-disabled-feature");
 }
 
+}  // namespace
+
 // Return true if we DON'T want to upload this flag to the crash server.
-bool IsBoringSwitch(const std::string& flag) {
+bool IsBoringChromeSwitch(const std::string& flag) {
   static const char* const kIgnoreSwitches[] = {
     switches::kEnableLogging,
     switches::kFlagSwitchesBegin,
@@ -160,11 +164,9 @@ bool IsBoringSwitch(const std::string& flag) {
   return false;
 }
 
-}  // namespace
-
 void SetCrashKeysFromCommandLine(const base::CommandLine& command_line) {
   HandleEnableDisableFeatures(command_line);
-  SetSwitchesFromCommandLine(command_line, &IsBoringSwitch);
+  SetSwitchesFromCommandLine(command_line, &IsBoringChromeSwitch);
 }
 
 void SetActiveExtensions(const std::set<std::string>& extensions) {

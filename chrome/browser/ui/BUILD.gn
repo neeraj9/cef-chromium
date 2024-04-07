@@ -8,6 +8,7 @@ import("//build/config/compiler/compiler.gni")
 import("//build/config/features.gni")
 import("//build/config/ozone.gni")
 import("//build/config/ui.gni")
+import("//cef/libcef/features/features.gni")
 import("//chrome/browser/buildflags.gni")
 import("//chrome/common/features.gni")
 import("//chromeos/ash/components/assistant/assistant.gni")
@@ -386,6 +387,10 @@ static_library("ui") {
     "//build/config/compiler:wexit_time_destructors",
   ]
 
+  if (enable_cef) {
+    configs += [ "//cef/libcef/features:config" ]
+  }
+
   # Since browser and browser_ui actually depend on each other,
   # we must omit the dependency from browser_ui to browser.
   # However, this means browser_ui and browser should more or less
@@ -411,6 +416,7 @@ static_library("ui") {
     "//build:chromeos_buildflags",
     "//build/config/chromebox_for_meetings:buildflags",
     "//cc/paint",
+    "//cef/libcef/features",
     "//chrome:resources",
     "//chrome:strings",
     "//chrome/app:chrome_dll_resources",
@@ -2901,6 +2907,8 @@ static_library("ui") {
       "views/apps/app_dialog/app_block_dialog_view.h",
       "views/apps/app_dialog/app_pause_dialog_view.cc",
       "views/apps/app_dialog/app_pause_dialog_view.h",
+      "views/apps/app_dialog/app_uninstall_dialog_view.cc",
+      "views/apps/app_dialog/app_uninstall_dialog_view.h",
       "views/apps/app_info_dialog/arc_app_info_links_panel.cc",
       "views/apps/app_info_dialog/arc_app_info_links_panel.h",
       "views/apps/chrome_app_window_client_views_chromeos.cc",
@@ -4941,8 +4949,6 @@ static_library("ui") {
       "views/accessibility/theme_tracking_non_accessible_image_view.h",
       "views/apps/app_dialog/app_dialog_view.cc",
       "views/apps/app_dialog/app_dialog_view.h",
-      "views/apps/app_dialog/app_uninstall_dialog_view.cc",
-      "views/apps/app_dialog/app_uninstall_dialog_view.h",
       "views/apps/app_info_dialog/app_info_dialog_container.cc",
       "views/apps/app_info_dialog/app_info_dialog_container.h",
       "views/apps/app_info_dialog/app_info_dialog_views.cc",
@@ -6740,6 +6746,7 @@ static_library("ui") {
   if (enable_printing) {
     deps += [
       "//components/printing/browser",
+      "//components/printing/common:mojo_interfaces",
       "//printing",
     ]
   }

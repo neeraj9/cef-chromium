@@ -52,6 +52,8 @@ NativeWidgetType GetNativeWidgetTypeForInitParams(
     return NativeWidgetType::DESKTOP_NATIVE_WIDGET_AURA;
 
   return (params.parent &&
+          (params.child ||
+           params.type == views::Widget::InitParams::TYPE_BUBBLE) &&
           params.type != views::Widget::InitParams::TYPE_MENU &&
           params.type != views::Widget::InitParams::TYPE_TOOLTIP)
              ? NativeWidgetType::NATIVE_WIDGET_AURA

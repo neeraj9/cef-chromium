@@ -11,8 +11,9 @@
 #include "base/base_export.h"
 #include "base/containers/span.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/features.h"
 
-#if BUILDFLAG(IS_NACL)
+#if BUILDFLAG(IS_NACL) || BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 #include "base/hash/md5_nacl.h"
 #else
 #include "base/hash/md5_boringssl.h"

@@ -62,7 +62,8 @@ class FileSelectHelper : public base::RefCountedThreadSafe<
   static void RunFileChooser(
       content::RenderFrameHost* render_frame_host,
       scoped_refptr<content::FileSelectListener> listener,
-      const blink::mojom::FileChooserParams& params);
+      const blink::mojom::FileChooserParams& params,
+      bool run_from_cef = false);
 
   // Enumerates all the files in directory.
   static void EnumerateDirectory(
@@ -262,7 +263,8 @@ class FileSelectHelper : public base::RefCountedThreadSafe<
   // |accept_types| contains only valid lowercased MIME types or file extensions
   // beginning with a period (.).
   static std::unique_ptr<ui::SelectFileDialog::FileTypeInfo>
-  GetFileTypesFromAcceptType(const std::vector<std::u16string>& accept_types);
+  GetFileTypesFromAcceptType(const std::vector<std::u16string>& accept_types,
+                             bool run_from_cef);
 
   // Check the accept type is valid. It is expected to be all lower case with
   // no whitespace.
@@ -322,6 +324,9 @@ class FileSelectHelper : public base::RefCountedThreadSafe<
 
   // Set to false in unit tests since there is no WebContents.
   bool abort_on_missing_web_contents_in_tests_ = true;
+
+  // Set to true if this dialog was triggered via CEF.
+  bool run_from_cef_ = false;
 
 #if BUILDFLAG(IS_CHROMEOS_ASH)
   base::WeakPtrFactory<FileSelectHelper> weak_ptr_factory_{this};

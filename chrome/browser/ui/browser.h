@@ -22,6 +22,7 @@
 #include "base/timer/elapsed_timer.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/tab_contents/web_contents_collection.h"
 #include "chrome/browser/themes/theme_service_observer.h"
 #include "chrome/browser/ui/bookmarks/bookmark_bar.h"
@@ -47,6 +48,10 @@
 #include "ui/base/window_open_disposition.h"
 #include "ui/gfx/geometry/rect.h"
 #include "ui/shell_dialogs/select_file_dialog.h"
+
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/browser/chrome/browser_delegate.h"
+#endif
 
 #if BUILDFLAG(IS_ANDROID)
 #error This file should only be included on desktop.
@@ -347,6 +352,15 @@ class Browser : public TabStripModelObserver,
     // Document Picture in Picture options, specific to TYPE_PICTURE_IN_PICTURE.
     std::optional<blink::mojom::PictureInPictureWindowOptions> pip_options;
 
+#if BUILDFLAG(ENABLE_CEF)
+    // Opaque CEF-specific configuration. Will be propagated to new Browsers.
+    scoped_refptr<cef::BrowserDelegate::CreateParams> cef_params;
+
+    // Specify the Browser that is opening this popup.
+    // Currently only used with TYPE_PICTURE_IN_PICTURE and TYPE_DEVTOOLS.
+    raw_ptr<Browser, DanglingUntriaged> opener = nullptr;
+#endif
+
    private:
     friend class Browser;
     friend class WindowSizerChromeOSTest;
@@ -428,6 +442,13 @@ class Browser : public TabStripModelObserver,
     update_ui_immediately_for_testing_ = true;
   }
 
+  // Return true if CEF will expose the toolbar to the client. This value is
+  // used to selectively enable toolbar behaviors such as command processing
+  // and omnibox focus without also including the toolbar in BrowserView layout
+  // calculations.
+  void set_toolbar_overridden(bool val) { toolbar_overridden_ = val; }
+  bool toolbar_overridden() const { return toolbar_overridden_; }
+
   // Accessors ////////////////////////////////////////////////////////////////
 
   const CreateParams& create_params() const { return create_params_; }
@@ -501,6 +522,12 @@ class Browser : public TabStripModelObserver,
 
   base::WeakPtr<Browser> AsWeakPtr();
   base::WeakPtr<const Browser> AsWeakPtr() const;
+
+#if BUILDFLAG(ENABLE_CEF)
+  cef::BrowserDelegate* cef_delegate() const {
+    return cef_browser_delegate_.get();
+  }
+#endif
 
   // Get the FindBarController for this browser, creating it if it does not
   // yet exist.
@@ -909,11 +936,19 @@ class Browser : public TabStripModelObserver,
   void SetContentsBounds(content::WebContents* source,
                          const gfx::Rect& bounds) override;
   void UpdateTargetURL(content::WebContents* source, const GURL& url) override;
+  bool DidAddMessageToConsole(content::WebContents* source,
+                              blink::mojom::ConsoleMessageLevel log_level,
+                              const std::u16string& message,
+                              int32_t line_no,
+                              const std::u16string& source_id) override;
   void ContentsMouseEvent(content::WebContents* source,
                           bool motion,
                           bool exited) override;
   void ContentsZoomChange(bool zoom_in) override;
   bool TakeFocus(content::WebContents* source, bool reverse) override;
+  void CanDownload(const GURL& url,
+                   const std::string& request_method,
+                   base::OnceCallback<void(bool)> callback) override;
   void BeforeUnloadFired(content::WebContents* source,
                          bool proceed,
                          bool* proceed_to_fire_unload) override;
@@ -1253,6 +1288,10 @@ class Browser : public TabStripModelObserver,
   // This Browser's window.
   raw_ptr<BrowserWindow, DanglingUntriaged> window_;
 
+#if BUILDFLAG(ENABLE_CEF)
+  std::unique_ptr<cef::BrowserDelegate> cef_browser_delegate_;
+#endif
+
   std::unique_ptr<TabStripModelDelegate> const tab_strip_model_delegate_;
   std::unique_ptr<TabStripModel> const tab_strip_model_;
 
@@ -1318,6 +1357,8 @@ class Browser : public TabStripModelObserver,
   ui::WindowShowState initial_show_state_;
   const std::string initial_workspace_;
   bool initial_visible_on_all_workspaces_state_;
+
+  bool toolbar_overridden_ = false;
 
   CreationSource creation_source_ = CreationSource::kUnknown;
 

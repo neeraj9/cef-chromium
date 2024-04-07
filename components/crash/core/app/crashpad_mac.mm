@@ -17,11 +17,14 @@
 #include "base/apple/foundation_util.h"
 #include "base/check.h"
 #include "base/files/file_path.h"
+#include "base/path_service.h"
 #include "base/strings/string_number_conversions.h"
 #include "base/strings/string_piece.h"
 #include "base/strings/sys_string_conversions.h"
 #include "build/branding_buildflags.h"
 #include "components/crash/core/app/crash_reporter_client.h"
+#include "components/crash/core/app/crash_switches.h"
+#include "content/public/common/content_paths.h"
 #include "third_party/crashpad/crashpad/client/crash_report_database.h"
 #include "third_party/crashpad/crashpad/client/crashpad_client.h"
 #include "third_party/crashpad/crashpad/client/crashpad_info.h"
@@ -39,15 +42,25 @@ std::map<std::string, std::string> GetProcessSimpleAnnotations() {
     std::map<std::string, std::string> process_annotations;
     @autoreleasepool {
       NSBundle* outer_bundle = base::apple::OuterBundle();
+      CrashReporterClient* crash_reporter_client = GetCrashReporterClient();
+      const char* product_name = "";
+      const char* product_version = "";
+      crash_reporter_client->GetProductNameAndVersion(&product_name,
+                                                      &product_version);
+
+      if (strlen(product_name) == 0) {
 #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
-      process_annotations["prod"] = "Chrome_Mac";
+        process_annotations["product"] = "Chrome_Mac";
 #else
-      NSString* product = base::apple::ObjCCast<NSString>(
-          [outer_bundle objectForInfoDictionaryKey:base::apple::CFToNSPtrCast(
-                                                       kCFBundleNameKey)]);
-      process_annotations["prod"] =
-          base::SysNSStringToUTF8(product).append("_Mac");
+        NSString* product = base::apple::ObjCCast<NSString>(
+            [outer_bundle objectForInfoDictionaryKey:base::apple::CFToNSPtrCast(
+                                                         kCFBundleNameKey)]);
+        process_annotations["product"] =
+            base::SysNSStringToUTF8(product).append("_Mac");
 #endif
+      } else {
+        process_annotations["product"] = product_name;
+      }
 
 #if BUILDFLAG(GOOGLE_CHROME_BRANDING)
       // Empty means stable.
@@ -78,12 +91,20 @@ std::map<std::string, std::string> GetProcessSimpleAnnotations() {
         }
       }
 
-      NSString* version =
-          base::apple::ObjCCast<NSString>([base::apple::FrameworkBundle()
-              objectForInfoDictionaryKey:@"CFBundleShortVersionString"]);
-      process_annotations["ver"] = base::SysNSStringToUTF8(version);
+      if (strlen(product_version) == 0) {
+        NSString* version =
+            base::apple::ObjCCast<NSString>([base::apple::FrameworkBundle()
+                objectForInfoDictionaryKey:@"CFBundleShortVersionString"]);
+        process_annotations["version"] = base::SysNSStringToUTF8(version);
+      } else {
+        process_annotations["version"] = product_version;
+      }
 
-      process_annotations["plat"] = std::string("OS X");
+#if defined(ARCH_CPU_ARM64)
+      process_annotations["platform"] = std::string("macosarm64");
+#else
+      process_annotations["platform"] = std::string("macos");
+#endif
     }  // @autoreleasepool
     return process_annotations;
   }();
@@ -143,10 +164,10 @@ bool PlatformCrashpadInitialization(
 
   if (initial_client) {
     @autoreleasepool {
-      base::FilePath framework_bundle_path = base::apple::FrameworkBundlePath();
-      base::FilePath handler_path =
-          framework_bundle_path.Append("Helpers").Append(
-              "chrome_crashpad_handler");
+      // Use the same subprocess helper exe.
+      base::FilePath handler_path;
+      base::PathService::Get(content::CHILD_PROCESS_EXE, &handler_path);
+      DCHECK(!handler_path.empty());
 
       // Is there a way to recover if this fails?
       CrashReporterClient* crash_reporter_client = GetCrashReporterClient();
@@ -174,6 +195,12 @@ bool PlatformCrashpadInitialization(
         arguments.push_back(
             "--reset-own-crash-exception-port-to-system-default");
       }
+
+      // Since we're using the same subprocess helper exe we must specify the
+      // process type.
+      arguments.push_back(std::string("--type=") + switches::kCrashpadHandler);
+
+      crash_reporter_client->GetCrashOptionalArguments(&arguments);
 
       bool result = GetCrashpadClient().StartHandler(
           handler_path, *database_path, metrics_path, url,

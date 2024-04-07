@@ -603,6 +603,57 @@ SaveAndShareSubMenuModel::SaveAndShareSubMenuModel(
   }
 }
 
+#if BUILDFLAG(ENABLE_CEF)
+using IsVisibleCallback = base::RepeatingCallback<bool(int)>;
+
+void FilterMenuModel(ui::SimpleMenuModel* model,
+                     const IsVisibleCallback& is_visible) {
+  absl::optional<size_t> last_separator;
+  size_t visible_ct = 0;
+  for (size_t i = 0; i < model->GetItemCount(); ++i) {
+    const auto type = model->GetTypeAt(i);
+    if (type == ui::MenuModel::TYPE_SEPARATOR) {
+      if (last_separator) {
+        // Remove multiple separators in a row. Prefer to remove a NORMAL
+        // separator if possible (as compared to zoom/edit controls which use
+        // UPPER/LOWER separators).
+        if (model->GetSeparatorTypeAt(*last_separator) ==
+            ui::NORMAL_SEPARATOR) {
+          model->RemoveItemAt(*last_separator);
+          i--;
+          last_separator = i;
+        } else {
+          model->RemoveItemAt(i);
+          i--;
+        }
+      } else if (visible_ct == 0) {
+        // Remove leading separator.
+        model->RemoveItemAt(i);
+        i--;
+      } else {
+        last_separator = i;
+      }
+      visible_ct = 0;
+    } else if (is_visible.Run(model->GetCommandIdAt(i))) {
+      last_separator = absl::nullopt;
+      visible_ct++;
+
+      if (type == ui::MenuModel::TYPE_SUBMENU) {
+        // Filter sub-menu.
+        auto sub_model =
+            static_cast<ui::SimpleMenuModel*>(model->GetSubmenuModelAt(i));
+        FilterMenuModel(sub_model, is_visible);
+      }
+    }
+  }
+
+  if (last_separator) {
+    // Remove trailing separator.
+    model->RemoveItemAt(*last_separator);
+  }
+}
+#endif  // BUILDFLAG(ENABLE_CEF)
+
 }  // namespace
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -1465,7 +1516,7 @@ bool AppMenuModel::IsCommandIdChecked(int command_id) const {
   return false;
 }
 
-bool AppMenuModel::IsCommandIdEnabled(int command_id) const {
+bool AppMenuModel::IsCommandIdEnabledInternal(int command_id) const {
   GlobalError* error =
       GlobalErrorServiceFactory::GetForProfile(browser_->profile())
           ->GetGlobalErrorByMenuItemCommandID(command_id);
@@ -1478,6 +1529,30 @@ bool AppMenuModel::IsCommandIdEnabled(int command_id) const {
     default:
       return chrome::IsCommandEnabled(browser_, command_id);
   }
+}
+
+bool AppMenuModel::IsCommandIdEnabled(int command_id) const {
+  if (!IsCommandIdEnabledInternal(command_id)) {
+    return false;
+  }
+
+#if BUILDFLAG(ENABLE_CEF)
+  if (browser_->cef_delegate()) {
+    return browser_->cef_delegate()->IsAppMenuItemEnabled(command_id);
+  }
+#endif
+
+  return true;
+}
+
+bool AppMenuModel::IsCommandIdVisible(int command_id) const {
+#if BUILDFLAG(ENABLE_CEF)
+  if (browser_->cef_delegate()) {
+    return browser_->cef_delegate()->IsAppMenuItemVisible(command_id);
+  }
+#endif
+
+  return true;
 }
 
 bool AppMenuModel::IsCommandIdAlerted(int command_id) const {
@@ -1647,11 +1722,15 @@ void AppMenuModel::Build() {
                                        kDefaultIconSize));
   }
 
-  AddSeparator(features::IsChromeRefresh2023() ? ui::NORMAL_SEPARATOR
-                                               : ui::LOWER_SEPARATOR);
-  CreateZoomMenu();
-  AddSeparator(features::IsChromeRefresh2023() ? ui::NORMAL_SEPARATOR
-                                               : ui::UPPER_SEPARATOR);
+  if (IsCommandIdVisible(IDC_ZOOM_MENU)) {
+    AddSeparator(features::IsChromeRefresh2023() ? ui::NORMAL_SEPARATOR
+                                                 : ui::LOWER_SEPARATOR);
+    CreateZoomMenu();
+    AddSeparator(features::IsChromeRefresh2023() ? ui::NORMAL_SEPARATOR
+                                                 : ui::UPPER_SEPARATOR);
+  } else {
+    AddSeparator(ui::NORMAL_SEPARATOR);
+  }
 
   AddItemWithStringId(IDC_PRINT, IDS_PRINT);
 
@@ -1757,9 +1836,13 @@ void AppMenuModel::Build() {
                          kMoreToolsMenuItem);
 
   if (!features::IsChromeRefresh2023()) {
-    AddSeparator(ui::LOWER_SEPARATOR);
-    CreateCutCopyPasteMenu();
-    AddSeparator(ui::UPPER_SEPARATOR);
+    if (IsCommandIdVisible(IDC_EDIT_MENU)) {
+      AddSeparator(ui::LOWER_SEPARATOR);
+      CreateCutCopyPasteMenu();
+      AddSeparator(ui::UPPER_SEPARATOR);
+    } else {
+      AddSeparator(ui::NORMAL_SEPARATOR);
+    }
   }
 
   if (!features::IsChromeRefresh2023()) {
@@ -1847,6 +1930,11 @@ void AppMenuModel::Build() {
 #endif
     SetCommandIcon(this, IDC_EXIT, kExitMenuIcon);
   }
+
+#if BUILDFLAG(ENABLE_CEF)
+  FilterMenuModel(this, base::BindRepeating(&AppMenuModel::IsCommandIdVisible,
+                                            base::Unretained(this)));
+#endif
 
   uma_action_recorded_ = false;
 }

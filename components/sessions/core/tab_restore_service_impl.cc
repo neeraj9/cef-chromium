@@ -192,6 +192,7 @@ int SerializeWindowShowState(ui::WindowShowState show_state) {
     case ui::SHOW_STATE_NORMAL:
       return kSerializedShowStateNormal;
     case ui::SHOW_STATE_MINIMIZED:
+    case ui::SHOW_STATE_HIDDEN:
       return kSerializedShowStateMinimized;
     case ui::SHOW_STATE_MAXIMIZED:
       return kSerializedShowStateMaximized;

@@ -43,6 +43,7 @@
 #include "content/public/browser/mojo_binder_policy_map.h"
 #include "content/public/browser/privacy_sandbox_invoking_api.h"
 #include "content/public/browser/storage_partition_config.h"
+#include "content/public/browser/web_contents.h"
 #include "content/public/common/alternative_error_page_override_info.mojom-forward.h"
 #include "content/public/common/page_visibility_state.h"
 #include "content/public/common/window_container_type.mojom-forward.h"
@@ -2024,7 +2025,7 @@ class CONTENT_EXPORT ContentBrowserClient {
   //
   // If |relative_partition_path| is the empty string, it means this needs to
   // create the default NetworkContext for the BrowserContext.
-  virtual void ConfigureNetworkContextParams(
+  virtual bool ConfigureNetworkContextParams(
       BrowserContext* context,
       bool in_memory,
       const base::FilePath& relative_partition_path,
@@ -2244,6 +2245,19 @@ class CONTENT_EXPORT ContentBrowserClient {
       RenderFrameHost* initiator_document,
       mojo::PendingRemote<network::mojom::URLLoaderFactory>* out_factory);
 
+  // Same as above, but exposing the whole ResourceRequest object.
+  virtual bool HandleExternalProtocol(
+      WebContents::Getter web_contents_getter,
+      int frame_tree_node_id,
+      NavigationUIData* navigation_data,
+      bool is_primary_main_frame,
+      bool is_in_fenced_frame_tree,
+      network::mojom::WebSandboxFlags sandbox_flags,
+      const network::ResourceRequest& request,
+      const absl::optional<url::Origin>& initiating_origin,
+      RenderFrameHost* initiator_document,
+      mojo::PendingRemote<network::mojom::URLLoaderFactory>* out_factory) { return false; }
+
   // Creates an OverlayWindow to be used for video or Picture-in-Picture.
   // This window will house the content shown when in Picture-in-Picture mode.
   // This will return a new OverlayWindow.
@@ -2300,6 +2314,10 @@ class CONTENT_EXPORT ContentBrowserClient {
   // of the form "productname/version", with no other slashes.
   // Used as part of the user agent string.
   virtual std::string GetProduct();
+
+  // Returns the Chrome-specific product string. This is used for compatibility
+  // purposes with external tools like Selenium.
+  virtual std::string GetChromeProduct() { return GetProduct(); }
 
   // Returns the user agent. This can also return the reduced user agent, based
   // on blink::features::kUserAgentReduction. Content may cache this value.

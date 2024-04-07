@@ -785,6 +785,22 @@ NavigationURLLoaderImpl::PrepareForNonInterceptedRequest() {
             : nullptr,
         &loader_factory);
 
+    if (!handled) {
+      handled = GetContentClient()->browser()->HandleExternalProtocol(
+          web_contents_getter_, frame_tree_node_id_,
+          navigation_ui_data_.get(), request_info_->is_primary_main_frame,
+          FrameTreeNode::GloballyFindByID(frame_tree_node_id_)
+              ->IsInFencedFrameTree(),
+          request_info_->sandbox_flags,
+          *resource_request_, initiating_origin,
+          request_info_->initiator_document_token
+              ? RenderFrameHostImpl::FromDocumentToken(
+                    request_info_->initiator_process_id,
+                    *request_info_->initiator_document_token)
+              : nullptr,
+          &loader_factory);
+    }
+
     if (loader_factory) {
       factory = std::move(factory_builder).Finish(std::move(loader_factory));
     } else {

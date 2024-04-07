@@ -15,6 +15,7 @@
 #define CONTENT_BROWSER_BROWSER_PLUGIN_BROWSER_PLUGIN_EMBEDDER_H_
 
 #include "base/memory/raw_ptr.h"
+#include "content/common/content_export.h"
 
 namespace content {
 
@@ -26,7 +27,7 @@ struct NativeWebKeyboardEvent;
 
 // TODO(wjmaclean): Get rid of "BrowserPlugin" in the name of this class.
 // Perhaps "WebContentsEmbedderDelegate" would be better?
-class BrowserPluginEmbedder {
+class CONTENT_EXPORT BrowserPluginEmbedder {
  public:
   BrowserPluginEmbedder(const BrowserPluginEmbedder&) = delete;
   BrowserPluginEmbedder& operator=(const BrowserPluginEmbedder&) = delete;

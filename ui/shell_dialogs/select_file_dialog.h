@@ -102,7 +102,8 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
   // is refcounted and uses a background thread.
   static scoped_refptr<SelectFileDialog> Create(
       Listener* listener,
-      std::unique_ptr<SelectFilePolicy> policy);
+      std::unique_ptr<SelectFilePolicy> policy,
+      bool run_from_cef = false);
 
   SelectFileDialog(const SelectFileDialog&) = delete;
   SelectFileDialog& operator=(const SelectFileDialog&) = delete;
@@ -199,6 +200,19 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
                   const GURL* caller = nullptr);
   bool HasMultipleFileTypeChoices();
 
+  // Match the types used by CefWindowHandle.
+#if BUILDFLAG(IS_MAC)
+  using WidgetType = void*;
+  static constexpr WidgetType kNullWidget = nullptr;
+#else
+  using WidgetType = gfx::AcceleratedWidget;
+  static constexpr WidgetType kNullWidget = gfx::kNullAcceleratedWidget;
+#endif
+
+  void set_owning_widget(WidgetType widget) {
+    owning_widget_ = widget;
+  }
+
  protected:
   friend class base::RefCountedThreadSafe<SelectFileDialog>;
 
@@ -224,6 +238,11 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
   // The listener to be notified of selection completion.
   raw_ptr<Listener> listener_;
 
+  std::unique_ptr<SelectFilePolicy> select_file_policy_;
+
+  // Support override of the |owning_window| value.
+  WidgetType owning_widget_ = kNullWidget;
+
  private:
   // Tests if the file selection dialog can be displayed by
   // testing if the AllowFileSelectionDialogs-Policy is
@@ -236,8 +255,6 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
 
   // Returns true if the dialog has multiple file type choices.
   virtual bool HasMultipleFileTypeChoicesImpl() = 0;
-
-  std::unique_ptr<SelectFilePolicy> select_file_policy_;
 };
 
 SelectFileDialog* CreateSelectFileDialog(

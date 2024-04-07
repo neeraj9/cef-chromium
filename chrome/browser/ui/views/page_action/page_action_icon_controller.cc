@@ -98,6 +98,12 @@ void PageActionIconController::Init(const PageActionIconParams& params,
   };
 
   for (PageActionIconType type : params.types_enabled) {
+#if BUILDFLAG(ENABLE_CEF)
+    if (params.browser && params.browser->cef_delegate() &&
+        !params.browser->cef_delegate()->IsPageActionIconVisible(type)) {
+      continue;
+    }
+#endif
     switch (type) {
       case PageActionIconType::kPaymentsOfferNotification:
         add_page_action_icon(

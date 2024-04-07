@@ -17,8 +17,9 @@
 #include "base/containers/span.h"
 #include "base/gtest_prod_util.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/features.h"
 
-#if !BUILDFLAG(IS_NACL)
+#if !BUILDFLAG(IS_NACL) && !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 #include "third_party/boringssl/src/include/openssl/rand.h"
 #endif
 
@@ -125,7 +126,7 @@ class RandomBitGenerator {
   ~RandomBitGenerator() = default;
 };
 
-#if !BUILDFLAG(IS_NACL)
+#if !BUILDFLAG(IS_NACL) && !BUILDFLAG(IS_CEF_SANDBOX_BUILD)
 class NonAllocatingRandomBitGenerator {
  public:
   using result_type = uint64_t;

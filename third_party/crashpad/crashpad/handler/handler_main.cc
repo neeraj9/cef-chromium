@@ -39,6 +39,7 @@
 #include "base/strings/utf_string_conversions.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/features.h"
 #include "client/crash_report_database.h"
 #include "client/crashpad_client.h"
 #include "client/crashpad_info.h"
@@ -88,6 +89,10 @@
 #include "util/win/initial_client_data.h"
 #include "util/win/session_end_watcher.h"
 #endif  // BUILDFLAG(IS_APPLE)
+
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/common/cef_crash_report_upload_thread.h"
+#endif
 
 namespace crashpad {
 
@@ -248,6 +253,9 @@ struct Options {
   bool periodic_tasks;
   bool rate_limit;
   bool upload_gzip;
+  int max_uploads;
+  int max_database_size;
+  int max_database_age;
 #if BUILDFLAG(IS_CHROMEOS_ASH) || BUILDFLAG(IS_CHROMEOS_LACROS)
   bool use_cros_crash_reporter = false;
   base::FilePath minidump_dir_for_tests;
@@ -622,6 +630,9 @@ int HandlerMain(int argc,
     kOptionTraceParentWithException,
 #endif
     kOptionURL,
+    kOptionMaxUploads,
+    kOptionMaxDatabaseSize,
+    kOptionMaxDatabaseAge,
 #if BUILDFLAG(IS_CHROMEOS_ASH) || BUILDFLAG(IS_CHROMEOS_LACROS)
     kOptionUseCrosCrashReporter,
     kOptionMinidumpDirForTests,
@@ -722,6 +733,9 @@ int HandlerMain(int argc,
 #endif  // BUILDFLAG(IS_ANDROID)
     {"help", no_argument, nullptr, kOptionHelp},
     {"version", no_argument, nullptr, kOptionVersion},
+    {"max-uploads", required_argument, nullptr, kOptionMaxUploads},
+    {"max-db-size", required_argument, nullptr, kOptionMaxDatabaseSize},
+    {"max-db-age", required_argument, nullptr, kOptionMaxDatabaseAge},
     {nullptr, 0, nullptr, 0},
   };
 
@@ -879,6 +893,27 @@ int HandlerMain(int argc,
         options.url = optarg;
         break;
       }
+      case kOptionMaxUploads: {
+        if (base::StringToInt(optarg, &options.max_uploads)) {
+          if (options.max_uploads < 0)
+            options.max_uploads = 0;
+        }
+        break;
+      }
+      case kOptionMaxDatabaseSize: {
+        if (base::StringToInt(optarg, &options.max_database_size)) {
+          if (options.max_database_size < 0)
+            options.max_database_size = 0;
+        }
+        break;
+      }
+      case kOptionMaxDatabaseAge: {
+        if (base::StringToInt(optarg, &options.max_database_age)) {
+          if (options.max_database_age < 0)
+            options.max_database_age = 0;
+        }
+        break;
+      }
 #if BUILDFLAG(IS_CHROMEOS_ASH) || BUILDFLAG(IS_CHROMEOS_LACROS)
       case kOptionUseCrosCrashReporter: {
         options.use_cros_crash_reporter = true;
@@ -1028,11 +1063,20 @@ int HandlerMain(int argc,
     upload_thread_options.upload_gzip = options.upload_gzip;
     upload_thread_options.watch_pending_reports = options.periodic_tasks;
 
+#if BUILDFLAG(ENABLE_CEF)
+    upload_thread.Reset(new CefCrashReportUploadThread(
+        database.get(),
+        options.url,
+        upload_thread_options,
+        CrashReportUploadThread::ProcessPendingReportsObservationCallback(),
+        options.max_uploads));
+#else
     upload_thread.Reset(new CrashReportUploadThread(
         database.get(),
         options.url,
         upload_thread_options,
         CrashReportUploadThread::ProcessPendingReportsObservationCallback()));
+#endif
     upload_thread.Get()->Start();
   }
 
@@ -1103,7 +1147,8 @@ int HandlerMain(int argc,
   ScopedStoppable prune_thread;
   if (options.periodic_tasks) {
     prune_thread.Reset(new PruneCrashReportThread(
-        database.get(), PruneCondition::GetDefault()));
+        database.get(), PruneCondition::GetDefault(options.max_database_size,
+                                                   options.max_database_age)));
     prune_thread.Get()->Start();
   }
 

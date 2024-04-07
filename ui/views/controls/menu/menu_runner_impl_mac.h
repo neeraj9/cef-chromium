@@ -40,6 +40,7 @@ class VIEWS_EXPORT MenuRunnerImplMac : public MenuRunnerImplInterface {
       MenuAnchorPosition anchor,
       int32_t run_types,
       gfx::NativeView native_view_for_gestures,
+      gfx::AcceleratedWidget parent_widget,
       absl::optional<gfx::RoundedCornersF> corners,
       absl::optional<std::string> show_menu_host_duration_histogram) override;
   void Cancel() override;

@@ -47,6 +47,8 @@ class MenuRunnerImplInterface {
       MenuAnchorPosition anchor,
       int32_t run_types,
       gfx::NativeView native_view_for_gestures,
+      gfx::AcceleratedWidget parent_widget =
+          gfx::kNullAcceleratedWidget,
       std::optional<gfx::RoundedCornersF> corners = std::nullopt,
       std::optional<std::string> show_menu_host_duration_histogram =
           std::nullopt) = 0;

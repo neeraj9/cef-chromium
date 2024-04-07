@@ -6,8 +6,13 @@
 
 #include "base/observer_list.h"
 #include "base/strings/string_util.h"
+#include "cef/libcef/features/runtime.h"
 #include "extensions/browser/extension_registry_factory.h"
 #include "extensions/browser/extension_registry_observer.h"
+
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/common/extensions/extensions_util.h"
+#endif
 
 namespace extensions {
 
@@ -17,6 +22,11 @@ ExtensionRegistry::~ExtensionRegistry() = default;
 
 // static
 ExtensionRegistry* ExtensionRegistry::Get(content::BrowserContext* context) {
+#if BUILDFLAG(ENABLE_CEF)
+  if (cef::IsAlloyRuntimeEnabled() && !extensions::ExtensionsEnabled()) {
+    return nullptr;
+  }
+#endif
   return ExtensionRegistryFactory::GetForBrowserContext(context);
 }
 

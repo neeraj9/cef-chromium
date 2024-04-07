@@ -412,6 +412,12 @@ void FindBarHost::GetWidgetBounds(gfx::Rect* bounds) {
   // The BrowserView does Layout for the components that we care about
   // positioning relative to, so we ask it to tell us where we should go.
   *bounds = browser_view()->GetFindBarBoundingBox();
+
+#if BUILDFLAG(ENABLE_CEF)
+  if (browser_view()->browser() && browser_view()->browser()->cef_delegate()) {
+    browser_view()->browser()->cef_delegate()->UpdateFindBarBoundingBox(bounds);
+  }
+#endif
 }
 
 void FindBarHost::RegisterAccelerators() {

@@ -19,6 +19,7 @@ import("//build/config/sanitizers/sanitizers.gni")
 import("//build/config/ui.gni")
 import("//build/gn_logs.gni")
 import("//build/util/generate_wrapper.gni")
+import("//cef/libcef/features/features.gni")
 import("//components/enterprise/buildflags/buildflags.gni")
 import("//components/nacl/features.gni")
 import("//device/vr/buildflags/buildflags.gni")
@@ -273,6 +274,10 @@ group("gn_all") {
     }
 
     deps += root_extra_deps
+
+    if (enable_cef) {
+      deps += [ "//cef" ]
+    }
 
     if (enable_printing || enable_printing_tests) {
       deps += [ "//printing:printing_unittests" ]

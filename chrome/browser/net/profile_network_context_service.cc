@@ -23,6 +23,7 @@
 #include "base/trace_event/trace_event.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/browser_features.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/content_settings/cookie_settings_factory.h"
@@ -275,8 +276,10 @@ ProfileNetworkContextService::ProfileNetworkContextService(Profile* profile)
                           base::Unretained(this)));
   cookie_settings_ = CookieSettingsFactory::GetForProfile(profile);
   cookie_settings_observation_.Observe(cookie_settings_.get());
-  privacy_sandbox_settings_observer_.Observe(
-      PrivacySandboxSettingsFactory::GetForProfile(profile));
+  if (!cef::IsAlloyRuntimeEnabled()) {
+    privacy_sandbox_settings_observer_.Observe(
+        PrivacySandboxSettingsFactory::GetForProfile(profile));
+  }
 
   DisableQuicIfNotAllowed();
 
@@ -913,9 +916,26 @@ void ProfileNetworkContextService::ConfigureNetworkContextParamsInternal(
   network_context_params->cookie_manager_params =
       CreateCookieManagerParams(profile_, *cookie_settings_);
 
+  if (!in_memory) {
+    network_context_params->file_paths =
+        ::network::mojom::NetworkContextFilePaths::New();
+  }
+
   // Configure on-disk storage for non-OTR profiles. OTR profiles just use
   // default behavior (in memory storage, default sizes).
-  if (!in_memory) {
+  if (!in_memory && cef::IsAlloyRuntimeEnabled()) {
+    PrefService* prefs = profile_->GetPrefs();
+    // Configure the HTTP cache path and size.
+    const base::FilePath& base_cache_path =
+        prefs->GetFilePath(prefs::kDiskCacheDir);
+    DCHECK(!base_cache_path.empty());
+    network_context_params->file_paths->http_cache_directory =
+        base_cache_path.Append(chrome::kCacheDirname);
+    network_context_params->http_cache_max_size =
+        prefs->GetInteger(prefs::kDiskCacheSize);
+  }
+
+  if (!in_memory && !cef::IsAlloyRuntimeEnabled()) {
     PrefService* local_state = g_browser_process->local_state();
     // Configure the HTTP cache path and size.
     base::FilePath base_cache_path;
@@ -924,15 +944,14 @@ void ProfileNetworkContextService::ConfigureNetworkContextParamsInternal(
         local_state->GetFilePath(prefs::kDiskCacheDir);
     if (!disk_cache_dir.empty())
       base_cache_path = disk_cache_dir.Append(base_cache_path.BaseName());
+    network_context_params->file_paths->http_cache_directory =
+        base_cache_path.Append(chrome::kCacheDirname);
     const int disk_cache_size = local_state->GetInteger(prefs::kDiskCacheSize);
     network_context_params->http_cache_max_size = disk_cache_size;
     network_context_params->shared_dictionary_cache_max_size = disk_cache_size;
+  }
 
-    network_context_params->file_paths =
-        ::network::mojom::NetworkContextFilePaths::New();
-
-    network_context_params->file_paths->http_cache_directory =
-        base_cache_path.Append(chrome::kCacheDirname);
+  if (!in_memory) {
     network_context_params->file_paths->data_directory =
         path.Append(chrome::kNetworkDataDirname);
     network_context_params->file_paths->unsandboxed_data_path = path;
@@ -1107,6 +1126,7 @@ void ProfileNetworkContextService::ConfigureNetworkContextParamsInternal(
   network_context_params->first_party_sets_access_delegate_params =
       network::mojom::FirstPartySetsAccessDelegateParams::New();
   network_context_params->first_party_sets_access_delegate_params->enabled =
+      cef::IsAlloyRuntimeEnabled() ? false :
       PrivacySandboxSettingsFactory::GetForProfile(profile_)
           ->AreRelatedWebsiteSetsEnabled();
 

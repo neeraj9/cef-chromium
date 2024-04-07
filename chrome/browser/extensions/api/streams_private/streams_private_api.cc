@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/extensions/extension_tab_util.h"
 #include "chrome/browser/preloading/prefetch/no_state_prefetch/chrome_no_state_prefetch_contents_delegate.h"
 #include "components/no_state_prefetch/browser/no_state_prefetch_contents.h"
@@ -27,6 +28,10 @@
 #include "pdf/pdf_features.h"
 #endif  // BUILDFLAG(ENABLE_PDF)
 
+#if BUILDFLAG(ENABLE_CEF)
+#include "cef/libcef/browser/extensions/alloy_extensions_util.h"
+#endif
+
 namespace extensions {
 
 void StreamsPrivateAPI::SendExecuteMimeTypeHandlerEvent(
@@ -44,6 +49,7 @@ void StreamsPrivateAPI::SendExecuteMimeTypeHandlerEvent(
   if (!web_contents)
     return;
 
+  if (!cef::IsAlloyRuntimeEnabled()) {
   // If the request was for NoStatePrefetch, abort the prefetcher and do not
   // continue. This is because plugins cancel NoStatePrefetch, see
   // http://crbug.com/343590.
@@ -53,6 +59,7 @@ void StreamsPrivateAPI::SendExecuteMimeTypeHandlerEvent(
   if (no_state_prefetch_contents) {
     no_state_prefetch_contents->Destroy(prerender::FINAL_STATUS_DOWNLOAD);
     return;
+  }
   }
 
   auto* browser_context = web_contents->GetBrowserContext();
@@ -80,9 +87,18 @@ void StreamsPrivateAPI::SendExecuteMimeTypeHandlerEvent(
   // forms of zooming won't work).
   // TODO(1042323): Present a coherent representation of a tab id for portal
   // contents.
-  int tab_id = web_contents->GetOuterWebContents()
-                   ? SessionID::InvalidValue().id()
-                   : ExtensionTabUtil::GetTabId(web_contents);
+  int tab_id;
+  if (web_contents->GetOuterWebContents()) {
+    tab_id = SessionID::InvalidValue().id();
+  } else
+#if BUILDFLAG(ENABLE_CEF)
+  if (cef::IsAlloyRuntimeEnabled()) {
+    tab_id = alloy::GetTabIdForWebContents(web_contents);
+  } else
+#endif  // BUILDFLAG(ENABLE_CEF)
+  {
+    tab_id = ExtensionTabUtil::GetTabId(web_contents);
+  }
 
   std::unique_ptr<StreamContainer> stream_container(
       new StreamContainer(tab_id, embedded, handler_url, extension_id,

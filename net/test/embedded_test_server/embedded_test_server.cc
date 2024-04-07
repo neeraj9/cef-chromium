@@ -1015,7 +1015,7 @@ bool EmbeddedTestServer::PostTaskToIOThreadAndWait(base::OnceClosure closure) {
   if (!base::CurrentThread::Get())
     temporary_loop = std::make_unique<base::SingleThreadTaskExecutor>();
 
-  base::RunLoop run_loop;
+  base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
   if (!io_thread_->task_runner()->PostTaskAndReply(
           FROM_HERE, std::move(closure), run_loop.QuitClosure())) {
     return false;
@@ -1042,7 +1042,7 @@ bool EmbeddedTestServer::PostTaskToIOThreadAndWaitWithResult(
   if (!base::CurrentThread::Get())
     temporary_loop = std::make_unique<base::SingleThreadTaskExecutor>();
 
-  base::RunLoop run_loop;
+  base::RunLoop run_loop(base::RunLoop::Type::kNestableTasksAllowed);
   bool task_result = false;
   if (!io_thread_->task_runner()->PostTaskAndReplyWithResult(
           FROM_HERE, std::move(task),

@@ -28,6 +28,7 @@ class BrowserViewLayoutDelegate {
       const gfx::Rect& available_space,
       views::Label& window_title_label) const = 0;
   virtual int GetTopInsetInBrowserView() const = 0;
+  virtual void UpdateDialogTopInsetInBrowserView(int* dialog_top_y) const = 0;
   virtual bool IsToolbarVisible() const = 0;
   virtual bool IsBookmarkBarVisible() const = 0;
   virtual bool IsContentsSeparatorEnabled() const = 0;

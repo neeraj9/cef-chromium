@@ -13,6 +13,7 @@
 #include "base/path_service.h"
 #include "base/task/single_thread_task_runner.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/common/chrome_paths.h"
 #include "chrome/common/profiler/thread_profiler.h"
 #include "chrome/common/profiler/thread_profiler_configuration.h"
@@ -61,7 +62,8 @@ void ChromeContentUtilityClient::UtilityThreadStarted() {
       command_line->GetSwitchValueASCII(switches::kProcessType);
   // An in-process utility thread may run in other processes, only set up
   // collector in a utility process.
-  if (process_type == switches::kUtilityProcess) {
+  if (process_type == switches::kUtilityProcess &&
+      !cef::IsAlloyRuntimeEnabled()) {
     // The HeapProfilerController should have been created in
     // ChromeMainDelegate::PostEarlyInitialization.
     using HeapProfilerController = heap_profiling::HeapProfilerController;

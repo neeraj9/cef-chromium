@@ -659,14 +659,17 @@ bool NativeThemeWin::ShouldUseDarkColors() const {
   // Windows high contrast modes are entirely different themes,
   // so let them take priority over dark mode.
   // ...unless --force-dark-mode was specified in which case caveat emptor.
-  if (InForcedColorsMode() && !IsForcedDarkMode())
+  if (supports_windows_dark_mode_ && IsForcedDarkMode()) {
+    return true;
+  }
+  if (InForcedColorsMode())
     return false;
   return NativeTheme::ShouldUseDarkColors();
 }
 
 NativeTheme::PreferredColorScheme
 NativeThemeWin::CalculatePreferredColorScheme() const {
-  if (!InForcedColorsMode())
+  if (!InForcedColorsMode() || !supports_windows_dark_mode_)
     return NativeTheme::CalculatePreferredColorScheme();
 
   // According to the spec, the preferred color scheme for web content is 'dark'
@@ -1657,8 +1660,9 @@ void NativeThemeWin::RegisterColorFilteringRegkeyObserver() {
 }
 
 void NativeThemeWin::UpdateDarkModeStatus() {
-  bool dark_mode_enabled = false;
-  if (hkcu_themes_regkey_.Valid()) {
+  bool dark_mode_enabled = ShouldUseDarkColors();
+  if (supports_windows_dark_mode_ && !IsForcedDarkMode() &&
+      hkcu_themes_regkey_.Valid()) {
     DWORD apps_use_light_theme = 1;
     hkcu_themes_regkey_.ReadValueDW(L"AppsUseLightTheme",
                                     &apps_use_light_theme);

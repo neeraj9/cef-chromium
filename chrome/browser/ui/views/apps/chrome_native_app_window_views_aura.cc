@@ -43,6 +43,7 @@ ChromeNativeAppWindowViewsAura::GetRestorableState(
 
     case ui::SHOW_STATE_DEFAULT:
     case ui::SHOW_STATE_MINIMIZED:
+    case ui::SHOW_STATE_HIDDEN:
     case ui::SHOW_STATE_INACTIVE:
     case ui::SHOW_STATE_END:
       return ui::SHOW_STATE_NORMAL;

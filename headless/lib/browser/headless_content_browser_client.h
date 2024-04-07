@@ -83,7 +83,7 @@ class HeadlessContentBrowserClient : public content::ContentBrowserClient {
       const url::Origin& accessing_origin,
       std::string* out_debug_message = nullptr) override;
 
-  void ConfigureNetworkContextParams(
+  bool ConfigureNetworkContextParams(
       content::BrowserContext* context,
       bool in_memory,
       const base::FilePath& relative_partition_path,

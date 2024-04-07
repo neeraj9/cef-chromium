@@ -6,6 +6,7 @@
 
 #include "base/feature_list.h"
 #include "build/build_config.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/content_settings/host_content_settings_map_factory.h"
 #include "chrome/browser/installable/installable_utils.h"
 #include "chrome/browser/profiles/profile.h"
@@ -88,6 +89,10 @@ PeriodicBackgroundSyncPermissionContext::GetPermissionStatusInternal(
   if (IsTwaInstalled(requesting_origin))
     return CONTENT_SETTING_ALLOW;
 #endif
+
+  if (cef::IsAlloyRuntimeEnabled()) {
+    return CONTENT_SETTING_BLOCK;
+  }
 
   bool can_bypass_install_requirement =
       base::FeatureList::IsEnabled(

@@ -175,11 +175,8 @@ ContentMainParams::~ContentMainParams() = default;
 ContentMainParams::ContentMainParams(ContentMainParams&&) = default;
 ContentMainParams& ContentMainParams::operator=(ContentMainParams&&) = default;
 
-// This function must be marked with NO_STACK_PROTECTOR or it may crash on
-// return, see the --change-stack-guard-on-fork command line flag.
-int NO_STACK_PROTECTOR
-RunContentProcess(ContentMainParams params,
-                  ContentMainRunner* content_main_runner) {
+int ContentMainInitialize(ContentMainParams params,
+                          ContentMainRunner* content_main_runner) {
   base::FeatureList::FailOnFeatureAccessWithoutFeatureList();
 #if BUILDFLAG(IS_CHROMEOS_LACROS)
   // Lacros is launched with inherited priority. Revert to normal priority
@@ -187,9 +184,6 @@ RunContentProcess(ContentMainParams params,
   base::PlatformThread::SetCurrentThreadType(base::ThreadType::kDefault);
 #endif
   int exit_code = -1;
-#if BUILDFLAG(IS_MAC)
-  base::apple::ScopedNSAutoreleasePool autorelease_pool;
-#endif
 
   // A flag to indicate whether Main() has been called before. On Android, we
   // may re-run Main() without restarting the browser process. This flag
@@ -275,14 +269,6 @@ RunContentProcess(ContentMainParams params,
 #endif
 
 #if BUILDFLAG(IS_MAC)
-    // We need this pool for all the objects created before we get to the event
-    // loop, but we don't want to leave them hanging around until the app quits.
-    // Each "main" needs to flush this pool right before it goes into its main
-    // event loop to get rid of the cruft. TODO(https://crbug.com/1424190): This
-    // is not safe. Each main loop should create and destroy its own pool; it
-    // should not be flushing the pool at the base of the autorelease pool
-    // stack.
-    params.autorelease_pool = &autorelease_pool;
     InitializeMac();
 #endif
 
@@ -332,12 +318,46 @@ RunContentProcess(ContentMainParams params,
 
   if (IsSubprocess())
     CommonSubprocessInit();
-  exit_code = content_main_runner->Run();
 
+  return exit_code;
+}
+
+// This function must be marked with NO_STACK_PROTECTOR or it may crash on
+// return, see the --change-stack-guard-on-fork command line flag.
+int NO_STACK_PROTECTOR
+ContentMainRun(ContentMainRunner* content_main_runner) {
+  return content_main_runner->Run();
+}
+
+void ContentMainShutdown(ContentMainRunner* content_main_runner) {
 #if !BUILDFLAG(IS_ANDROID) && !BUILDFLAG(IS_IOS)
   content_main_runner->Shutdown();
 #endif
+}
 
+// This function must be marked with NO_STACK_PROTECTOR or it may crash on
+// return, see the --change-stack-guard-on-fork command line flag.
+int NO_STACK_PROTECTOR
+RunContentProcess(ContentMainParams params,
+                  ContentMainRunner* content_main_runner) {
+#if BUILDFLAG(IS_MAC)
+  // We need this pool for all the objects created before we get to the event
+  // loop, but we don't want to leave them hanging around until the app quits.
+  // Each "main" needs to flush this pool right before it goes into its main
+  // event loop to get rid of the cruft. TODO(https://crbug.com/1424190): This
+  // is not safe. Each main loop should create and destroy its own pool; it
+  // should not be flushing the pool at the base of the autorelease pool
+  // stack.
+  base::apple::ScopedNSAutoreleasePool autorelease_pool;
+  params.autorelease_pool = &autorelease_pool;
+#endif
+
+  int exit_code = ContentMainInitialize(std::move(params), content_main_runner);
+  if (exit_code >= 0)
+    return exit_code;
+  exit_code = ContentMainRun(content_main_runner);
+
+  ContentMainShutdown(content_main_runner);
   return exit_code;
 }
 

@@ -172,6 +172,7 @@ struct EnumTraits<ui::mojom::WindowShowState, ui::WindowShowState> {
       case ui::SHOW_STATE_INACTIVE:
         return ui::mojom::WindowShowState::SHOW_STATE_INACTIVE;
       case ui::SHOW_STATE_MINIMIZED:
+      case ui::SHOW_STATE_HIDDEN:
         return ui::mojom::WindowShowState::SHOW_STATE_MINIMIZED;
       case ui::SHOW_STATE_MAXIMIZED:
         return ui::mojom::WindowShowState::SHOW_STATE_MAXIMIZED;

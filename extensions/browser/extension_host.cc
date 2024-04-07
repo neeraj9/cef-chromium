@@ -104,12 +104,13 @@ ExtensionHost::ExtensionHost(const Extension* extension,
          host_type == mojom::ViewType::kOffscreenDocument ||
          host_type == mojom::ViewType::kExtensionPopup ||
          host_type == mojom::ViewType::kExtensionSidePanel);
-  host_contents_ = WebContents::Create(
+  host_contents_owned_ = WebContents::Create(
       WebContents::CreateParams(browser_context_, site_instance));
+  host_contents_ = host_contents_owned_.get();
   host_contents_->SetOwnerLocationForDebug(FROM_HERE);
-  content::WebContentsObserver::Observe(host_contents_.get());
+  content::WebContentsObserver::Observe(host_contents_);
   host_contents_->SetDelegate(this);
-  SetViewType(host_contents_.get(), host_type);
+  SetViewType(host_contents_, host_type);
   main_frame_host_ = host_contents_->GetPrimaryMainFrame();
 
   // Listen for when an extension is unloaded from the same profile, as it may
@@ -125,9 +126,47 @@ ExtensionHost::ExtensionHost(const Extension* extension,
   // Create password reuse detection manager when new extension web contents are
   // created.
   ExtensionsBrowserClient::Get()->CreatePasswordReuseDetectionManager(
-      host_contents_.get());
+      host_contents_);
 
   ExtensionHostRegistry::Get(browser_context_)->ExtensionHostCreated(this);
+}
+
+ExtensionHost::ExtensionHost(ExtensionHostDelegate* delegate,
+                             const Extension* extension,
+                             content::BrowserContext* browser_context,
+                             content::WebContents* host_contents,
+                             const GURL& url,
+                             mojom::ViewType host_type)
+    : delegate_(delegate),
+      extension_(extension),
+      extension_id_(extension->id()),
+      browser_context_(browser_context),
+      host_contents_(host_contents),
+      initial_url_(url),
+      extension_host_type_(host_type) {
+  DCHECK(delegate);
+  DCHECK(browser_context);
+  DCHECK(host_contents);
+
+  DCHECK(host_type == mojom::ViewType::kExtensionBackgroundPage ||
+         host_type == mojom::ViewType::kOffscreenDocument ||
+         host_type == mojom::ViewType::kExtensionPopup ||
+         host_type == mojom::ViewType::kExtensionSidePanel);
+
+  content::WebContentsObserver::Observe(host_contents_);
+  SetViewType(host_contents_, host_type);
+
+  main_frame_host_ = host_contents_->GetPrimaryMainFrame();
+
+  // Listen for when an extension is unloaded from the same profile, as it may
+  // be the same extension that this points to.
+  ExtensionRegistry::Get(browser_context_)->AddObserver(this);
+
+  // Set up web contents observers and pref observers.
+  delegate_->OnExtensionHostCreated(host_contents_);
+
+  ExtensionWebContentsObserver::GetForWebContents(host_contents_)->
+      dispatcher()->set_delegate(this);
 }
 
 ExtensionHost::~ExtensionHost() {

@@ -34,6 +34,7 @@
 #include "net/ssl/ssl_private_key.h"
 #include "net/url_request/redirect_util.h"
 #include "net/url_request/url_request_context.h"
+#include "url/url_util.h"
 
 namespace net {
 
@@ -44,6 +45,16 @@ base::Value::Dict SourceStreamSetParams(SourceStream* source_stream) {
   base::Value::Dict event_params;
   event_params.Set("filters", source_stream->Description());
   return event_params;
+}
+
+bool IsSecureScheme(const GURL& url) {
+  if (!url.has_scheme()) {
+    return false;
+  }
+  if (GURL::SchemeIsCryptographic(url.scheme_piece())) {
+    return true;
+  }
+  return base::Contains(url::GetSecureSchemes(), url.scheme_piece());
 }
 
 }  // namespace
@@ -334,8 +345,7 @@ GURL URLRequestJob::ComputeReferrerForPolicy(
   }
 
   bool secure_referrer_but_insecure_destination =
-      original_referrer.SchemeIsCryptographic() &&
-      !destination.SchemeIsCryptographic();
+      IsSecureScheme(original_referrer) && !IsSecureScheme(destination);
 
   switch (policy) {
     case ReferrerPolicy::CLEAR_ON_TRANSITION_FROM_SECURE_TO_INSECURE:

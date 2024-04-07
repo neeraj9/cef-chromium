@@ -33,10 +33,10 @@ class PrefWatcher : public KeyedService,
   void RegisterRendererPreferenceWatcher(
       mojo::PendingRemote<blink::mojom::RendererPreferenceWatcher> watcher);
 
- private:
   // KeyedService overrides:
   void Shutdown() override;
 
+ private:
   void OnDoNotTrackEnabledChanged() override;
 
   void UpdateRendererPreferences();

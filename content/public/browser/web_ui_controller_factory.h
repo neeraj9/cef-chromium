@@ -47,9 +47,6 @@ class CONTENT_EXPORT WebUIControllerFactory {
   virtual bool UseWebUIForURL(BrowserContext* browser_context,
                               const GURL& url) = 0;
 
- private:
-  friend class ScopedWebUIControllerFactoryRegistration;
-
   static void UnregisterFactoryForTesting(WebUIControllerFactory* factory);
 };
 

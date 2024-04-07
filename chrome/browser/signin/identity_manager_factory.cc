@@ -11,6 +11,7 @@
 #include "base/observer_list.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "cef/libcef/features/runtime.h"
 #include "chrome/browser/browser_process.h"
 #include "chrome/browser/image_fetcher/image_decoder_impl.h"
 #include "chrome/browser/profiles/profile.h"
@@ -96,6 +97,7 @@ IdentityManagerFactory::~IdentityManagerFactory() {
 // static
 signin::IdentityManager* IdentityManagerFactory::GetForProfile(
     Profile* profile) {
+  DCHECK(!cef::IsAlloyRuntimeEnabled());
   return static_cast<signin::IdentityManager*>(
       GetInstance()->GetServiceForBrowserContext(profile, true));
 }

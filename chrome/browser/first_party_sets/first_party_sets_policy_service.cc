@@ -275,6 +275,12 @@ void FirstPartySetsPolicyService::OnProfileConfigReady(
 
   // Representation of the current profile to be persisted on disk.
   const std::string browser_context_id = profile->GetBaseName().AsUTF8Unsafe();
+  if (browser_context_id.empty()) {
+    // CEF/Alloy incognito profiles have empty cache path.
+    OnReadyToNotifyDelegates(std::move(config),
+                             net::FirstPartySetsCacheFilter());
+    return;
+  }
 
   base::RepeatingCallback<content::BrowserContext*()> browser_context_getter =
       base::BindRepeating(

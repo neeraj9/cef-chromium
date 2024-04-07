@@ -25,7 +25,7 @@ ExtensionsClient* g_client = nullptr;
 }  // namespace
 
 ExtensionsClient* ExtensionsClient::Get() {
-  DCHECK(g_client);
+  // May be nullptr if using CEF Alloy with extensions disabled.
   return g_client;
 }
 
