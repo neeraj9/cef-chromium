@@ -1,0 +1,13 @@
+diff --git base/trace_event/builtin_categories.h base/trace_event/builtin_categories.h
+index 5f6efb0e93bce..626830a66b73c 100644
+--- base/trace_event/builtin_categories.h
++++ base/trace_event/builtin_categories.h
+@@ -65,6 +65,8 @@
+   X("cc")                                                                \
+   X("cc.debug")                                                          \
+   X("cdp.perf")                                                          \
++  X("cef")                                                               \
++  X("cef.client")                                                        \
+   X("chromeos")                                                          \
+   X("cma")                                                               \
+   X("compositor")                                                        \

@@ -1,0 +1,70 @@
+diff --git content/browser/renderer_host/input/fling_scheduler.cc content/browser/renderer_host/input/fling_scheduler.cc
+index 431df5d50debe..0fcc9ea8fbb1a 100644
+--- content/browser/renderer_host/input/fling_scheduler.cc
++++ content/browser/renderer_host/input/fling_scheduler.cc
+@@ -68,6 +68,9 @@ void FlingScheduler::ProgressFlingOnBeginFrameIfneeded(
+ }
+ 
+ ui::Compositor* FlingScheduler::GetCompositor() {
++  if (compositor_) {
++    return compositor_;
++  }
+   if (!host_->GetView()) {
+     return nullptr;
+   }
+diff --git content/browser/renderer_host/render_widget_host_impl.cc content/browser/renderer_host/render_widget_host_impl.cc
+index 5e4c61925a7ff..4bfdebe9cd5c7 100644
+--- content/browser/renderer_host/render_widget_host_impl.cc
++++ content/browser/renderer_host/render_widget_host_impl.cc
+@@ -3317,6 +3317,11 @@ void RenderWidgetHostImpl::OnInvalidInputEventSource() {
+       GetProcess(), bad_message::INPUT_ROUTER_INVALID_EVENT_SOURCE);
+ }
+ 
++void RenderWidgetHostImpl::SetCompositorForFlingScheduler(ui::Compositor* compositor)
++{
++  fling_scheduler_->SetCompositor(compositor);
++}
++
+ void RenderWidgetHostImpl::AddPendingUserActivation(
+     const WebInputEvent& event) {
+   if ((base::FeatureList::IsEnabled(
+diff --git content/browser/renderer_host/render_widget_host_impl.h content/browser/renderer_host/render_widget_host_impl.h
+index 7d8224bbb4141..af0fdad6399a3 100644
+--- content/browser/renderer_host/render_widget_host_impl.h
++++ content/browser/renderer_host/render_widget_host_impl.h
+@@ -811,6 +811,7 @@ class CONTENT_EXPORT RenderWidgetHostImpl
+ 
+   void ProgressFlingIfNeeded(base::TimeTicks current_time);
+   void StopFling();
++  void SetCompositorForFlingScheduler(ui::Compositor* compositor);
+ 
+   RenderWidgetHostViewBase* GetRenderWidgetHostViewBase();
+ 
+diff --git content/common/input/fling_scheduler_base.h content/common/input/fling_scheduler_base.h
+index e8ee63f3abc2e..2d1717082759d 100644
+--- content/common/input/fling_scheduler_base.h
++++ content/common/input/fling_scheduler_base.h
+@@ -7,12 +7,23 @@
+ 
+ #include "content/common/input/fling_controller.h"
+ 
++namespace ui {
++class Compositor;
++}
++
+ namespace content {
+ 
+ class FlingSchedulerBase : public FlingControllerSchedulerClient {
+  public:
+   virtual void ProgressFlingOnBeginFrameIfneeded(
+       base::TimeTicks current_time) = 0;
++
++  void SetCompositor(ui::Compositor* compositor) {
++    compositor_ = compositor;
++  }
++
++protected:
++ ui::Compositor* compositor_ = nullptr;
+ };
+ 
+ }  // namespace content

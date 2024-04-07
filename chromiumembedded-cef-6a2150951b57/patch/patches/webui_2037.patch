@@ -1,0 +1,77 @@
+diff --git chrome/browser/feedback/system_logs/log_sources/chrome_internal_log_source.cc chrome/browser/feedback/system_logs/log_sources/chrome_internal_log_source.cc
+index 95b2dd4972892..72e1b984ba689 100644
+--- chrome/browser/feedback/system_logs/log_sources/chrome_internal_log_source.cc
++++ chrome/browser/feedback/system_logs/log_sources/chrome_internal_log_source.cc
+@@ -19,10 +19,12 @@
+ #include "base/strings/string_util.h"
+ #include "base/system/sys_info.h"
+ #include "base/task/thread_pool.h"
++#include "base/threading/thread_restrictions.h"
+ #include "base/time/time.h"
+ #include "build/branding_buildflags.h"
+ #include "build/build_config.h"
+ #include "build/chromeos_buildflags.h"
++#include "cef/libcef/features/runtime.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/extensions/chrome_content_browser_client_extensions_part.h"
+ #include "chrome/browser/google/google_brand.h"
+@@ -421,7 +423,11 @@ void ChromeInternalLogSource::Fetch(SysLogsSourceCallback callback) {
+   response->emplace(kOsVersionTag, os_version);
+ #endif
+ 
+-  PopulateSyncLogs(response.get());
++  if (!cef::IsAlloyRuntimeEnabled()) {
++    // Avoid loading ProfileSyncServiceFactory which depends on a lot of
++    // unnecessary Chrome-specific factories.
++    PopulateSyncLogs(response.get());
++  }
+   PopulateExtensionInfoLogs(response.get());
+   PopulatePowerApiLogs(response.get());
+ #if BUILDFLAG(IS_WIN)
+@@ -509,8 +515,12 @@ void ChromeInternalLogSource::PopulateExtensionInfoLogs(
+   if (!profile)
+     return;
+ 
++  // May be nullptr if using CEF Alloy with extensions disabled.
+   extensions::ExtensionRegistry* extension_registry =
+       extensions::ExtensionRegistry::Get(profile);
++  if (!extension_registry)
++    return;
++
+   std::string extensions_list;
+   for (const scoped_refptr<const extensions::Extension>& extension :
+        extension_registry->enabled_extensions()) {
+@@ -611,6 +621,8 @@ void ChromeInternalLogSource::PopulateOnboardingTime(
+ #if BUILDFLAG(IS_WIN)
+ void ChromeInternalLogSource::PopulateUsbKeyboardDetected(
+     SystemLogsResponse* response) {
++  // The below call may result in some DLLs being loaded.
++  base::ScopedAllowBlockingForTesting allow_blocking;
+   std::string reason;
+   bool result =
+       base::win::IsKeyboardPresentOnSlate(ui::GetHiddenWindow(), &reason);
+diff --git chrome/browser/memory_details.cc chrome/browser/memory_details.cc
+index 73f5816dd06ae..33255343d351e 100644
+--- chrome/browser/memory_details.cc
++++ chrome/browser/memory_details.cc
+@@ -298,9 +298,11 @@ void MemoryDetails::CollectChildInfoOnUIThread() {
+                 render_process_host->GetBrowserContext())) {
+       content::BrowserContext* context =
+           render_process_host->GetBrowserContext();
++
++      // May be nullptr if using CEF Alloy with extensions disabled.
+       extensions::ExtensionRegistry* extension_registry =
+           extensions::ExtensionRegistry::Get(context);
+-      DCHECK(extension_registry);
++      if (extension_registry) {
+       extension_set = &extension_registry->enabled_extensions();
+       extensions::ProcessMap* process_map =
+           extensions::ProcessMap::Get(context);
+@@ -317,6 +319,7 @@ void MemoryDetails::CollectChildInfoOnUIThread() {
+           break;
+         }
+       }
++      }
+     }
+ #endif
+ 

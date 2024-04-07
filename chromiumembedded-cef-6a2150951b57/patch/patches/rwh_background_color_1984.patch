@@ -1,0 +1,46 @@
+diff --git content/browser/renderer_host/render_widget_host_view_aura.cc content/browser/renderer_host/render_widget_host_view_aura.cc
+index a1192dc007ae5..245b62a91f315 100644
+--- content/browser/renderer_host/render_widget_host_view_aura.cc
++++ content/browser/renderer_host/render_widget_host_view_aura.cc
+@@ -6,6 +6,7 @@
+ 
+ #include <limits>
+ #include <memory>
++#include <tuple>
+ #include <set>
+ #include <utility>
+ 
+@@ -718,10 +719,12 @@ gfx::Rect RenderWidgetHostViewAura::GetViewBounds() {
+ void RenderWidgetHostViewAura::UpdateBackgroundColor() {
+   DCHECK(GetBackgroundColor());
+ 
+-  SkColor color = *GetBackgroundColor();
+-  bool opaque = SkColorGetA(color) == SK_AlphaOPAQUE;
+-  window_->layer()->SetFillsBoundsOpaquely(opaque);
+-  window_->layer()->SetColor(color);
++  if (window_) {
++    SkColor color = *GetBackgroundColor();
++    bool opaque = SkColorGetA(color) == SK_AlphaOPAQUE;
++    window_->layer()->SetFillsBoundsOpaquely(opaque);
++    window_->layer()->SetColor(color);
++  }
+ }
+ 
+ #if BUILDFLAG(IS_WIN)
+@@ -2339,6 +2342,16 @@ void RenderWidgetHostViewAura::CreateAuraWindow(aura::client::WindowType type) {
+   window_->layer()->SetColor(GetBackgroundColor() ? *GetBackgroundColor()
+                                                   : SK_ColorWHITE);
+   UpdateFrameSinkIdRegistration();
++
++  // Do this after |window_| is created to avoid crashes on Win10.
++  // See https://crbug.com/761389.
++  auto web_contents =
++      WebContents::FromRenderViewHost(RenderViewHost::From(host_));
++  if (web_contents) {
++    // TODO(mostynb): actually use prefs.  Landing this as a separate CL
++    // first to rebaseline some unreliable layout tests.
++    std::ignore = web_contents->GetOrCreateWebPreferences();
++  }
+ }
+ 
+ void RenderWidgetHostViewAura::UpdateFrameSinkIdRegistration() {

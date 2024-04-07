@@ -1,0 +1,12 @@
+diff --git content/browser/renderer_host/render_frame_host_impl.cc content/browser/renderer_host/render_frame_host_impl.cc
+index 5181caded5641..034c54372fd59 100644
+--- content/browser/renderer_host/render_frame_host_impl.cc
++++ content/browser/renderer_host/render_frame_host_impl.cc
+@@ -10351,6 +10351,7 @@ void RenderFrameHostImpl::CommitNavigation(
+   auto browser_calc_origin_to_commit =
+       navigation_request->GetOriginToCommitWithDebugInfo();
+   if (!process_lock.is_error_page() && !is_mhtml_subframe &&
++      common_params->url.IsStandard() &&
+       !policy->CanAccessDataForOrigin(
+           GetProcess()->GetID(), browser_calc_origin_to_commit.first.value())) {
+     SCOPED_CRASH_KEY_STRING64("CommitNavigation", "lock_url",
